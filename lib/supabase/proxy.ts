@@ -7,6 +7,18 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
+  const pathname = request.nextUrl.pathname;
+  // Older confirmation links can deliver the PKCE code to the site root.
+  if (request.nextUrl.searchParams.has("code") && ["/", "/dashboard", "/auth/update-password"].includes(pathname)) {
+    const callback = new URL("/auth/confirm", request.url);
+    callback.searchParams.set("code", request.nextUrl.searchParams.get("code")!);
+    if (pathname === "/auth/update-password") callback.searchParams.set("next", pathname);
+    return NextResponse.redirect(callback);
+  }
+  if (pathname === "/api/reviewer" || pathname === "/api/flashcards") {
+    return supabaseResponse;
+  }
+
   // If the env vars are not set, skip proxy check. You can remove this
   // once you setup the project.
   if (!hasEnvVars) {
@@ -47,16 +59,11 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
-    return NextResponse.redirect(url);
+  const authEntry = ["/", "/auth/login", "/auth/sign-up"].includes(pathname);
+  if ((user && authEntry) || (!user && pathname !== "/" && !pathname.startsWith("/auth/"))) {
+    const response = NextResponse.redirect(new URL(user ? "/dashboard" : "/auth/login", request.url));
+    for (const cookie of supabaseResponse.cookies.getAll()) response.cookies.set(cookie);
+    return response;
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.

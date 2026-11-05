@@ -1,3 +1,14 @@
+## Mentora workspace
+
+Registered users enter `/dashboard` after login or email confirmation. All accounts use the same workspace. The dashboard shows the account’s subject and flashcard deck counts. Existing student demo links redirect to the corresponding dashboard pages.
+
+1. Configure the Supabase URL and publishable key and the server-side `GEMINI_API_KEY` in `.env.local`. For a new Supabase project, apply `supabase/migrations/20261105184231_subject_flashcards.sql`. Configure the site URL and allowed auth redirect URLs for the app’s origin, including `/auth/confirm` for confirmation and recovery.
+2. Open **My Subjects** to add a subject. Previously saved subjects and teacher enrollments are available to their owners.
+3. Generate a reviewer from a PDF. Choose **Save to subject / Generate flashcards**, select a subject, and save with an optional folder.
+4. Select the saved reviewer to generate a deck. Study a deck and reveal each answer to rate recall. Still Learning cards return the next day. Consecutive Known ratings use intervals of 3, 7, 14 and 30 days.
+
+Saved reviewers, decks, cards and ratings belong to the signed-in account. The most recent unsaved reviewer is remembered for that account in the current tab.
+
 <a href="https://demo-nextjs-with-supabase.vercel.app/">
   <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
   <h1 align="center">Next.js and Supabase Starter Kit</h1>
@@ -78,7 +89,14 @@ If you wish to just develop locally and not deploy to Vercel, [follow the steps 
   ```env
   NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=[INSERT SUPABASE PROJECT API PUBLISHABLE OR ANON KEY]
+  GEMINI_API_KEY=[INSERT GOOGLE AI STUDIO API KEY]
   ```
+
+  `GEMINI_API_KEY` powers the real PDF reviewer and is used only on the server.
+  Create a free key in [Google AI Studio](https://aistudio.google.com/app/apikey),
+  then restart the development server. The reviewer route is public during
+  prototype development; add authentication and durable rate limiting before a
+  public deployment so anonymous traffic cannot consume the API quota.
   > [!NOTE]
   > This example uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, which refers to Supabase's new **publishable** key format.
   > Both legacy **anon** keys and new **publishable** keys can be used with this variable name during the transition period. Supabase's dashboard may show `NEXT_PUBLIC_SUPABASE_ANON_KEY`; its value can be used in this example.

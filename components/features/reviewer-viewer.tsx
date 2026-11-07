@@ -1,3 +1,4 @@
+import { ActivityTracker } from "@/components/learning/activity-tracker";
 import { StudyGuideView } from "./study-guide-view";
 import { BookOpen, CheckCircle2, FileText, RotateCcw } from "lucide-react";
 import {
@@ -16,10 +17,11 @@ export function ReviewerViewer({
 }) {
   const reviewer = record.reviewer;
   if ("version" in reviewer) {
-    return <StudyGuideView archived={archived} guide={reviewer} record={record} onChooseAnother={onChooseAnother} />;
+    return <><ActivityTracker kind="reviewer" resource={record.fileName} title={reviewer.title} /><StudyGuideView archived={archived} guide={reviewer} record={record} onChooseAnother={onChooseAnother} /></>;
   }
   return (
     <section className="reviewer-output" aria-label="Generated reviewer">
+      <ActivityTracker kind="reviewer" resource={record.fileName} title={reviewer.title} />
       <div className="reviewer-success" role="status">
         <CheckCircle2 size={18} /> Your reviewer is ready.
       </div>

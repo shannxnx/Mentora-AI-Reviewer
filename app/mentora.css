@@ -34,27 +34,14 @@
   outline-offset: 4px;
 }
 .mentora-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 750;
-  font-size: 21px;
-  letter-spacing: -0.7px;
-  white-space: nowrap;
+  display: block;
+  width: 152px;
+  max-width: 100%;
+  height: auto;
+  color: #2466c5;
 }
-.mentora-mark {
-  display: grid;
-  place-items: center;
-  width: 35px;
-  height: 35px;
-  border-radius: 11px;
-  background: #6355d9;
-  color: white;
-  box-shadow: 0 4px 12px #6554da24;
-}
-.mentora-ai {
-  font-weight: 500;
-  color: #847be4;
+.mentora-app:not([data-subjects]) .mentora-sidebar .mentora-brand {
+  color: #9ac4ff;
 }
 .mentora-button {
   display: inline-flex;
@@ -954,13 +941,7 @@
   font-size: 10px;
 }
 .public-footer .mentora-brand {
-  font-size: 16px;
-  color: #283248;
-}
-.public-footer .mentora-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 120px;
 }
 .public-footer > a {
   display: flex;
@@ -1290,11 +1271,7 @@
     display: none;
   }
   .public-nav .mentora-brand {
-    font-size: 19px;
-  }
-  .public-nav .mentora-mark {
-    width: 31px;
-    height: 31px;
+    width: clamp(96px, 29vw, 132px);
   }
   .landing {
     padding: 0 22px;

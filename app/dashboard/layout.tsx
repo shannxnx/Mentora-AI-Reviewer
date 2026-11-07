@@ -5,6 +5,7 @@ import { StudentReviewerProvider } from "@/components/features/student-reviewer-
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import "@/app/mentora.css";
 import "@/components/flashcards/flashcards.css";
+import "@/components/learning/learning.css";
 
 async function SignedInWorkspace({ children }: { children: React.ReactNode }) {
   const db = await createClient();

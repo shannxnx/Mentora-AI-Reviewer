@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   async redirects() {
-    const sections = ["subjects", "materials", "generate", "flashcards"];
+    const sections = ["subjects", "materials", "generate", "flashcards", "profile", "progress", "practice"];
     return [
       ...sections.map(section => ({
         source: "/demo/student/" + section, destination: "/dashboard/" + section, permanent: false,

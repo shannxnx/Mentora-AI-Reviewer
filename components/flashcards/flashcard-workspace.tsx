@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { saveReviewerToLibrary } from "@/lib/reviewer/library";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { SubjectDirectory, subjectsPath } from "./subject-directory";
@@ -287,39 +288,8 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
   }
   async function saveReviewer() {
     if (!record || !subjectId) return;
-    const snapshot = {
-      fileName: record.fileName,
-      size: record.size,
-      reviewer: record.reviewer,
-    };
-    const hash = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(JSON.stringify(snapshot)),
-    );
-    const fingerprint = Array.from(new Uint8Array(hash), (b) =>
-      b.toString(16).padStart(2, "0"),
-    ).join("");
-    const db = createClient();
-    let { data: saved, error } = await db
-      .from("study_reviewers")
-      .insert({
-        subject_id: subjectId,
-        snapshot,
-        file_name: record.fileName,
-        fingerprint,
-        folder: folder.trim() || null,
-      })
-      .select("id")
-      .single();
-    if (error?.code === "23505")
-      ({ data: saved, error } = await db
-        .from("study_reviewers")
-        .select("id")
-        .eq("subject_id", subjectId)
-        .eq("fingerprint", fingerprint)
-        .single());
-    if (error || !saved) throw error;
-    selectGuide(saved.id);
+    const id = await saveReviewerToLibrary(record, subjectId, folder.trim() || null);
+    selectGuide(id);
     selectDeck("");
     setNotice("Reviewer ready. Choose topics or generate a deck below.");
   }
@@ -333,6 +303,7 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
           <Link className="subject-back" href={subjectsPath}><ArrowLeft size={16} />All subjects</Link>
         ) : <p className="guide-kicker">Study library</p>}
         <h1>{page === "subjects" ? subject?.name ?? "Subject" : "Flashcards"}</h1>
+        {subject && <Link className="text-link" href={"/dashboard/practice?subject=" + subject.id}>Practice this subject →</Link>}
       </header>
       {notice && (
         <p role="status" className="fc-notice">

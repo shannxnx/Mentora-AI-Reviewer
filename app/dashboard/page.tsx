@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, BookOpen, Layers, UploadCloud } from "lucide-react";
+import { ArrowRight, BookOpen, Layers, UploadCloud, ClipboardList, UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
 async function Dashboard() {
@@ -19,6 +19,8 @@ async function Dashboard() {
       <li><Link className="subject-tile" href="/dashboard/subjects"><strong>My Subjects</strong><span className="subject-glyph"><BookOpen size={38} /></span><span className="subject-tile-foot">{subjects.error ? "View subjects" : subjects.count + (subjects.count === 1 ? " subject" : " subjects")}<ArrowRight size={16} /></span></Link></li>
       <li><Link className="subject-tile" href="/dashboard/generate"><strong>Generate Reviewer</strong><span className="subject-glyph"><UploadCloud size={38} /></span><span className="subject-tile-foot">Choose a PDF<ArrowRight size={16} /></span></Link></li>
       <li><Link className="subject-tile" href="/dashboard/flashcards"><strong>Flashcards</strong><span className="subject-glyph"><Layers size={38} /></span><span className="subject-tile-foot">{decks.error ? "View decks" : decks.count + (decks.count === 1 ? " deck" : " decks")}<ArrowRight size={16} /></span></Link></li>
+      <li><Link className="subject-tile" href="/dashboard/practice"><strong>Practice Tests</strong><span className="subject-glyph"><ClipboardList size={38} /></span><span className="subject-tile-foot">Test your understanding<ArrowRight size={16} /></span></Link></li>
+      <li><Link className="subject-tile" href="/dashboard/profile"><strong>My Profile</strong><span className="subject-glyph"><UserRound size={38} /></span><span className="subject-tile-foot">See your learning progress<ArrowRight size={16} /></span></Link></li>
     </ul>
   </section>;
 }

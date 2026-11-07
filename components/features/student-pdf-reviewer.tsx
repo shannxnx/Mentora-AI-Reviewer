@@ -143,7 +143,7 @@ export function StudentPdfReviewer({
       )}
       {record && !editing ? (
         <div ref={output} tabIndex={-1} aria-label="Reviewer ready">
-          <div className="fc-launch"><Link className="mentora-button primary" href="/dashboard/flashcards">Save to subject / Generate flashcards</Link></div>
+          <div className="fc-launch button-row"><Link className="mentora-button primary" href="/dashboard/flashcards">Save to subject / Generate flashcards</Link><Link className="mentora-button secondary" href="/dashboard/practice">Create a practice test</Link></div>
           <ReviewerViewer
             record={record}
             onChooseAnother={() => {

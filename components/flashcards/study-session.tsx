@@ -1,4 +1,5 @@
 "use client";
+import { ActivityTracker } from "@/components/learning/activity-tracker";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Card } from "@/lib/flashcards/model";
@@ -148,6 +149,7 @@ export function StudySession({
     );
   return (
     <section className="fc-panel">
+      <ActivityTracker kind="flashcards" resource={cards[0]?.deck_id ?? session} title={topics[card?.topic] ? "Flashcards · " + topics[card.topic] : "Flashcard practice"} />
       <p className="guide-kicker">Study session</p>
       <h2>{topics[card.topic]}</h2>
       <p aria-live="polite">

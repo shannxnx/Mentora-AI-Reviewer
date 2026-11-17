@@ -1,5 +1,17 @@
 import { createClient } from "@/lib/supabase/client";
-import type { ReviewerRecord } from "./pdf-reviewer";
+import { parseReviewerRecord, type ReviewerRecord } from "./pdf-reviewer";
+import type { StudyDepth } from "./study-guide";
+
+export async function findSavedReviewer(owner: string, hash: string, depth: StudyDepth, signal: AbortSignal) {
+  const lookup = typeof AbortSignal.any === "function"
+    ? AbortSignal.any([signal, AbortSignal.timeout(2500)])
+    : signal;
+  const { data } = await createClient().from("study_reviewers").select("snapshot")
+    .eq("owner_id", owner).eq("snapshot->>sourceHash", hash).eq("snapshot->>depth", depth)
+    .order("id").limit(1).abortSignal(lookup).maybeSingle();
+  return data ? parseReviewerRecord(data.snapshot) : null;
+}
+
 
 export async function saveReviewerToLibrary(
   record: ReviewerRecord,
@@ -23,7 +35,8 @@ export async function saveReviewerToLibrary(
     .from("study_reviewers")
     .insert({
       subject_id: subjectId,
-      snapshot,
+      // Keep the original fingerprint stable for records saved before PDF reuse.
+      snapshot: { ...snapshot, sourceHash: record.sourceHash, depth: record.depth },
       file_name: record.fileName,
       fingerprint,
       folder,

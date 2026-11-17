@@ -1,29 +1,46 @@
+import { LoadingState } from "@/components/layout/loading-state";
 import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, BookOpen, Layers, UploadCloud, ClipboardList, UserRound } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { workspaceAccount } from "@/lib/supabase/server";
 
 async function Dashboard() {
-  const db = await createClient();
-  const { data } = await db.auth.getClaims();
-  const claims = data?.claims;
-  if (!claims?.sub) redirect("/auth/login");
+  const { db, user } = await workspaceAccount();
+  if (!user) redirect("/auth/login");
   const [subjects, decks] = await Promise.all([
-    db.from("study_subjects").select("id", { count: "exact", head: true }).eq("owner_id", claims.sub),
-    db.from("study_decks").select("id", { count: "exact", head: true }).eq("owner_id", claims.sub),
+    db.from("study_subjects").select("id", { count: "exact", head: true }).eq("owner_id", user.id),
+    db.from("study_decks").select("id", { count: "exact", head: true }).eq("owner_id", user.id),
   ]);
-  return <section className="subject-directory" aria-labelledby="dashboard-title">
+  const links = [
+    { href: "subjects", title: "My Subjects", icon: BookOpen,
+      description: subjects.error ? "Open your subject library" : (subjects.count ?? 0) + (subjects.count === 1 ? " subject in your library" : " subjects in your library") },
+    { href: "flashcards", title: "Flashcards", icon: Layers,
+      description: decks.error ? "Review your saved decks" : (decks.count ?? 0) + (decks.count === 1 ? " deck ready to study" : " decks ready to study") },
+    { href: "practice", title: "Practice Tests", icon: ClipboardList, description: "Test your understanding with questions from your materials" },
+    { href: "profile", title: "My Profile", icon: UserRound, description: "See your progress and the topics to revisit" },
+  ];
+  return <section className="dashboard-home" aria-labelledby="dashboard-title">
     <h1 id="dashboard-title">Your dashboard</h1>
-    <ul className="subject-grid">
-      <li><Link className="subject-tile" href="/dashboard/subjects"><strong>My Subjects</strong><span className="subject-glyph"><BookOpen size={38} /></span><span className="subject-tile-foot">{subjects.error ? "View subjects" : subjects.count + (subjects.count === 1 ? " subject" : " subjects")}<ArrowRight size={16} /></span></Link></li>
-      <li><Link className="subject-tile" href="/dashboard/generate"><strong>Generate Reviewer</strong><span className="subject-glyph"><UploadCloud size={38} /></span><span className="subject-tile-foot">Choose a PDF<ArrowRight size={16} /></span></Link></li>
-      <li><Link className="subject-tile" href="/dashboard/flashcards"><strong>Flashcards</strong><span className="subject-glyph"><Layers size={38} /></span><span className="subject-tile-foot">{decks.error ? "View decks" : decks.count + (decks.count === 1 ? " deck" : " decks")}<ArrowRight size={16} /></span></Link></li>
-      <li><Link className="subject-tile" href="/dashboard/practice"><strong>Practice Tests</strong><span className="subject-glyph"><ClipboardList size={38} /></span><span className="subject-tile-foot">Test your understanding<ArrowRight size={16} /></span></Link></li>
-      <li><Link className="subject-tile" href="/dashboard/profile"><strong>My Profile</strong><span className="subject-glyph"><UserRound size={38} /></span><span className="subject-tile-foot">See your learning progress<ArrowRight size={16} /></span></Link></li>
+    <section className="dashboard-start">
+      <span className="dashboard-upload-icon"><UploadCloud size={28} strokeWidth={1.6} aria-hidden="true" /></span>
+      <div>
+        <h2>Create your next reviewer</h2>
+        <p>Upload your lecture PDF and build a study guide, flashcards, or a practice test.</p>
+      </div>
+      <Link className="mentora-button primary" href="/dashboard/generate">Choose a PDF<ArrowRight size={17} aria-hidden="true" /></Link>
+    </section>
+    <ul className="dashboard-links">
+      {links.map(({ href, title, icon: Icon, description }) => <li key={href}>
+        <Link className="dashboard-link" href={"/dashboard/" + href}>
+          <span className="dashboard-link-icon"><Icon size={24} strokeWidth={1.6} aria-hidden="true" /></span>
+          <span><strong>{title}</strong><small>{description}</small></span>
+          <ArrowRight size={18} aria-hidden="true" />
+        </Link>
+      </li>)}
     </ul>
   </section>;
 }
 export default function Page() {
-  return <Suspense fallback={<p role="status">Loading your dashboard…</p>}><Dashboard /></Suspense>;
+  return <Suspense fallback={<LoadingState>Loading your dashboard…</LoadingState>}><Dashboard /></Suspense>;
 }

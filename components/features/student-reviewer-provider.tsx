@@ -8,6 +8,7 @@ import {
 
 const STORAGE_KEY = "mentora.student.pdf-reviewer.v2";
 type ReviewerState = {
+  owner?: string;
   record: ReviewerRecord | null;
   ready: boolean;
   storageNotice: string;
@@ -44,7 +45,7 @@ export function StudentReviewerProvider({ children, owner }: { children: React.R
   }
   return (
     <ReviewerContext.Provider
-      value={{ record, ready, storageNotice, saveRecord }}
+      value={{ owner, record, ready, storageNotice, saveRecord }}
     >
       {children}
     </ReviewerContext.Provider>

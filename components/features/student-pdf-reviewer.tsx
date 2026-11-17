@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowLeft,
   ArrowRight,
   BookOpen,
   Check,
@@ -15,8 +18,11 @@ import {
   pdfSelectionError,
   formatPdfSize,
 } from "@/lib/reviewer/pdf-reviewer";
-import { isStudyGuide, type StudyDepth } from "@/lib/reviewer/study-guide";
+import { findSavedReviewer, saveReviewerToLibrary } from "@/lib/reviewer/library";
+import { requestReviewer } from "@/lib/reviewer/request-reviewer";
+import { type StudyDepth } from "@/lib/reviewer/study-guide";
 import { useStudentReviewer } from "./student-reviewer-provider";
+import { SavedMaterials } from "./saved-materials";
 import { ReviewerViewer } from "./reviewer-viewer";
 
 export function StudentPdfReviewer({
@@ -24,12 +30,55 @@ export function StudentPdfReviewer({
 }: {
   page: "materials" | "generate";
 }) {
-  const { record, ready, storageNotice, saveRecord } = useStudentReviewer();
+  const { owner, record, ready, storageNotice, saveRecord } = useStudentReviewer();
+  const params = useSearchParams();
+  const router = useRouter();
+  const subjectId = params.get("subject");
+  const freshUpload = params.get("new") === "1";
+  const [targetSubject, setTargetSubject] = useState<{ id: string; name: string } | null>(null);
+  const [targetFailed, setTargetFailed] = useState(false);
+  const [savingSubject, setSavingSubject] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const savingLock = useRef(false);
+  useEffect(() => {
+    if (!subjectId || !owner) return;
+    const controller = new AbortController();
+    setTargetSubject(null);
+    setTargetFailed(false);
+    void createClient().from("study_subjects").select("id,name")
+      .eq("owner_id", owner).eq("id", subjectId).abortSignal(controller.signal).maybeSingle()
+      .then(({ data, error }) => {
+        if (controller.signal.aborted) return;
+        setTargetSubject(data);
+        setTargetFailed(!!error || !data);
+      });
+    return () => controller.abort();
+  }, [subjectId, owner]);
+  const destination = targetSubject?.id === subjectId ? targetSubject : null;
+
+  async function saveToSubject() {
+    if (!record || !destination || savingLock.current) return;
+    savingLock.current = true;
+    setSavingSubject(true);
+    setSaveError("");
+    try {
+      const id = await saveReviewerToLibrary(record, destination.id);
+      router.push("/dashboard/subjects?" + new URLSearchParams({ subject: destination.id, guide: id }));
+    } catch {
+      setSaveError("Couldn’t save your reviewer. It’s still here — please try again.");
+    } finally {
+      savingLock.current = false;
+      setSavingSubject(false);
+    }
+  }
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [depth, setDepth] = useState<StudyDepth>("balanced");
+  const [fresh, setFresh] = useState(false);
+  const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(freshUpload);
+  useEffect(() => { if (freshUpload) setEditing(true); }, [freshUpload, subjectId]);
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const output = useRef<HTMLDivElement>(null);
@@ -73,36 +122,14 @@ export function StudentPdfReviewer({
     setBusy(true);
     setError("");
     try {
-      const formData = new FormData();
-      formData.set("pdf", file);
-      formData.set("depth", depth);
-      const response = await fetch("/api/reviewer", {
-        method: "POST",
-        body: formData,
-        signal: controller.signal,
+      const next = await requestReviewer(file, depth, {
+        previous: record, signal: controller.signal, onStatus: setStatus, fresh,
+        findSaved: owner ? hash => findSavedReviewer(owner, hash, depth, controller.signal) : undefined,
       });
-      const payload: unknown = await response.json();
-      if (!response.ok) {
-        const message =
-          typeof payload === "object" &&
-          payload !== null &&
-          "error" in payload &&
-          typeof payload.error === "string"
-            ? payload.error
-            : "The reviewer could not be generated. Please try again.";
-        throw new Error(message);
-      }
-      const reviewer =
-        typeof payload === "object" && payload !== null && "reviewer" in payload
-          ? payload.reviewer
-          : null;
-      if (!isStudyGuide(reviewer))
-        throw new Error(
-          "The reviewer response was incomplete. Please try again.",
-        );
       if (controller.signal.aborted) return;
       focusResult.current = true;
-      saveRecord({ fileName: file.name, size: file.size, reviewer });
+      saveRecord(next);
+      setFresh(false);
       setEditing(false);
       setFile(null);
     } catch (cause) {
@@ -128,14 +155,17 @@ export function StudentPdfReviewer({
     );
   return (
     <>
+      {subjectId && <div className="subject-upload-context">
+        <Link className="subject-back" href={"/dashboard/subjects?subject=" + encodeURIComponent(subjectId)}><ArrowLeft size={16} aria-hidden="true" />{destination ? "Back to " + destination.name : "Back to subject"}</Link>
+        {destination ? <p>Create a reviewer, then save it to <strong>{destination.name}</strong>.</p> : targetFailed ? <p role="alert">This subject isn’t available. <Link href="/dashboard/subjects">Choose a subject</Link> to continue.</p> : <p role="status">Checking your subject…</p>}
+      </div>}
       <div className="page-intro">
         <div>
-          <p className="eyebrow">START WITH YOUR NOTES</p>
-          <h1>{page === "materials" ? "My Materials" : "Generate Reviewer"}</h1>
-          <p>Select a PDF and generate a study reviewer from its content.</p>
+                    <h1>{page === "materials" ? "My Materials" : "Generate Reviewer"}</h1>
+          <p>{page === "materials" ? "Your saved reviewers and latest study guide." : "Turn your lecture notes into a clear, focused study guide."}</p>
         </div>
-        <span className="subtle-badge">PDF reviewer · Gemini AI</span>
       </div>
+      {page === "materials" && owner && <SavedMaterials owner={owner} />}
       {storageNotice && (
         <p className="reviewer-storage-notice" role="status">
           {storageNotice}
@@ -143,7 +173,11 @@ export function StudentPdfReviewer({
       )}
       {record && !editing ? (
         <div ref={output} tabIndex={-1} aria-label="Reviewer ready">
-          <div className="fc-launch button-row"><Link className="mentora-button primary" href="/dashboard/flashcards">Save to subject / Generate flashcards</Link><Link className="mentora-button secondary" href="/dashboard/practice">Create a practice test</Link></div>
+          <div className="fc-launch button-row">
+            {subjectId ? <button className="mentora-button primary" disabled={savingSubject || !destination} onClick={saveToSubject}>{savingSubject ? "Saving reviewer…" : "Save to " + (destination?.name ?? "subject")}<ArrowRight size={17} aria-hidden="true" /></button> : <Link className="mentora-button primary" href="/dashboard/flashcards">Save to subject / Generate flashcards</Link>}
+            <Link className="mentora-button secondary" href={"/dashboard/practice" + (destination ? "?subject=" + destination.id : "")}>Create a practice test</Link>
+          </div>
+          {saveError && <p className="pdf-error" role="alert">{saveError}</p>}
           <ReviewerViewer
             record={record}
             onChooseAnother={() => {
@@ -170,7 +204,7 @@ export function StudentPdfReviewer({
               <div className="panel-heading">
                 <div>
                   <h2>Your next study session starts here</h2>
-                  <p>Choose one lecture PDF from your device.</p>
+                  <p>Choose a PDF up to 10 MB. For PowerPoint slides, choose File → Export or Save As → PDF first.</p>
                 </div>
               </div>
               <form
@@ -261,6 +295,10 @@ export function StudentPdfReviewer({
                     ))}
                   </div>
                 </fieldset>
+                {(owner || record?.sourceHash) && <label className="reviewer-fresh">
+                  <input type="checkbox" checked={fresh} disabled={busy} onChange={e => setFresh(e.target.checked)} />
+                  Generate a fresh version even if I already have a matching reviewer
+                </label>}
                 {error && (
                   <p className="pdf-error" role="alert">
                     {error}
@@ -275,7 +313,7 @@ export function StudentPdfReviewer({
                     {busy ? (
                       <>
                         <LoaderCircle size={17} className="reviewer-spinner" />{" "}
-                        Reading your PDF…
+                        Creating reviewer…
                       </>
                     ) : (
                       <>
@@ -283,6 +321,7 @@ export function StudentPdfReviewer({
                       </>
                     )}
                   </button>
+                  {busy && <button type="button" className="text-link" onClick={() => request.current?.abort()}>Cancel</button>}
                   {record && (
                     <button
                       type="button"
@@ -300,8 +339,7 @@ export function StudentPdfReviewer({
                 </div>
                 {busy && (
                   <p className="reviewer-working" role="status">
-                    Reading the document and building a focused reviewer. This
-                    may take up to a minute.
+                    {status}
                   </p>
                 )}
                 <p id="pdf-privacy" className="pdf-privacy">

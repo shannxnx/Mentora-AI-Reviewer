@@ -6,10 +6,9 @@ import {
   json,
   RequestError,
 } from "@/lib/practice/server";
-import { generateTest } from "@/lib/practice/ai";
 import { seal } from "@/lib/practice/crypto";
 import { isUuid, validSettings } from "@/lib/practice/model";
-import { parseStoredReviewer } from "@/lib/reviewer/pdf-reviewer";
+import { parseReviewerRecord } from "@/lib/reviewer/pdf-reviewer";
 import type { SavedGuide } from "@/lib/flashcards/model";
 
 export const maxDuration = 90;
@@ -104,7 +103,7 @@ export async function POST(request: Request) {
       throw new RequestError("Some selected material is unavailable.", 404);
     const guides = data.map((g) => ({
       ...g,
-      snapshot: parseStoredReviewer(JSON.stringify(g.snapshot)),
+      snapshot: parseReviewerRecord(g.snapshot),
     }));
     if (guides.some((g) => !g.snapshot))
       throw new RequestError("A saved reviewer could not be read.", 422);
@@ -118,6 +117,7 @@ export async function POST(request: Request) {
         409,
       );
     try {
+      const { generateTest } = await import("@/lib/practice/ai");
       const keys = await generateTest(guides as SavedGuide[], input.settings),
         encrypted = seal(keys);
       const questions = keys.map(

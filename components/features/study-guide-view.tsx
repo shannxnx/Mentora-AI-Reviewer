@@ -39,9 +39,10 @@ function TopicContent({ topic }: { topic: StudyTopic }) {
   );
 }
 
-export function StudyGuideView({ guide, record, onChooseAnother, archived = false }: {
+export function StudyGuideView({ guide, record, onChooseAnother, archived = false, backLabel }: {
   guide: StudyGuide;
   archived?: boolean;
+  backLabel?: string;
   record: ReviewerRecord;
   onChooseAnother: () => void;
 }) {
@@ -61,7 +62,7 @@ export function StudyGuideView({ guide, record, onChooseAnother, archived = fals
         <p className="guide-source">Source PDF · {record.fileName}</p>
         <div className="guide-actions">
           <button type="button" className="mentora-button secondary" onClick={() => window.print()}><Printer size={15} /> Print / Save PDF</button>
-          <button type="button" className="mentora-button secondary" onClick={onChooseAnother}><RotateCcw size={15} /> {archived ? "Back to flashcards" : "Choose another PDF"}</button>
+          <button type="button" className="mentora-button secondary" onClick={onChooseAnother}><RotateCcw size={15} /> {backLabel ?? (archived ? "Back to flashcards" : "Choose another PDF")}</button>
         </div>
       </header>
       <div className="guide-layout">

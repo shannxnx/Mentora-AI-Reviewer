@@ -36,7 +36,6 @@ export function LoginForm({className, ...props} : React.ComponentPropsWithoutRef
       });
       if (error) throw error;
       router.replace("/dashboard");
-      router.refresh();
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
@@ -48,9 +47,9 @@ export function LoginForm({className, ...props} : React.ComponentPropsWithoutRef
     <div className={cn("flex flex-col gap-6 ", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
+          <CardTitle className="text-2xl">Log in</CardTitle>
           <CardDescription>
-            Enter your email & password to login to your account
+            Enter your email and password to open your workspace.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -60,6 +59,7 @@ export function LoginForm({className, ...props} : React.ComponentPropsWithoutRef
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
+                  autoComplete="email"
                   type="email"
                   placeholder="m@example.com"
                   required
@@ -80,12 +80,13 @@ export function LoginForm({className, ...props} : React.ComponentPropsWithoutRef
                 <Input
                   id="password"
                   type="password"
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
+              {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Logging in..." : "Login"}
               </Button>

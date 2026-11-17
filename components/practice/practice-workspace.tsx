@@ -1,4 +1,5 @@
 "use client";
+import { LoadingState } from "@/components/layout/loading-state";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -17,10 +18,11 @@ import {
   type PracticeTest,
   type Attempt,
 } from "@/lib/practice/model";
-import { requestJson, dateLabel } from "@/lib/learning/http";
+import { AttemptHistory } from "./attempt-history";
+import { requestJson } from "@/lib/learning/http";
 import { pdfSelectionError } from "@/lib/reviewer/pdf-reviewer";
-import { isStudyGuide } from "@/lib/reviewer/study-guide";
-import { saveReviewerToLibrary } from "@/lib/reviewer/library";
+import { requestReviewer } from "@/lib/reviewer/request-reviewer";
+import { findSavedReviewer, saveReviewerToLibrary } from "@/lib/reviewer/library";
 import { useStudentReviewer } from "@/components/features/student-reviewer-provider";
 import { AttemptView } from "./test-attempt";
 
@@ -43,7 +45,7 @@ export function PracticeWorkspace() {
 function TestLibrary() {
   const router = useRouter(),
     params = useSearchParams(),
-    { record, saveRecord } = useStudentReviewer();
+    { owner, record, saveRecord } = useStudentReviewer();
   const [library, setLibrary] = useState<Library | null>(null),
     [page, setPage] = useState(0);
   const [subject, setSubject] = useState(params.get("subject") ?? ""),
@@ -62,13 +64,21 @@ function TestLibrary() {
       null,
     );
   const lock = useRef(false);
-  const load = useCallback(async () => {
-    const data = await requestJson<Library>("/api/practice?page=" + page);
+  const upload = useRef<AbortController | null>(null);
+  useEffect(() => () => upload.current?.abort(), []);
+  const load = useCallback(async (signal?: AbortSignal) => {
+    const data = await requestJson<Library>("/api/practice?page=" + page, { signal });
+    if (signal?.aborted) return;
     setLibrary(data);
     setSubject((s) => s || data.subjects[0]?.id || "");
   }, [page]);
   useEffect(() => {
-    void load().catch((e) => setError(e.message));
+    const controller = new AbortController();
+    setError("");
+    void load(controller.signal).catch(e => {
+      if (!controller.signal.aborted) setError(e.message);
+    });
+    return () => controller.abort();
   }, [load]);
   async function run(label: string, task: () => Promise<void>) {
     if (lock.current) return;
@@ -102,32 +112,24 @@ function TestLibrary() {
         let reviewerIds = selected;
         if (mode === "pdf") {
           if (!file) throw new Error("Choose a PDF first.");
-          const invalid = pdfSelectionError(file);
-          if (invalid) throw new Error(invalid);
-          const form = new FormData();
-          form.set("pdf", file);
-          form.set("depth", "balanced");
-          const response = await fetch("/api/reviewer", {
-            method: "POST",
-            body: form,
+          const controller = new AbortController();
+          upload.current = controller;
+          const generated = await requestReviewer(file, "balanced", {
+            previous: record, signal: controller.signal, onStatus: setBusy,
+            findSaved: owner ? hash => findSavedReviewer(owner, hash, "balanced", controller.signal) : undefined,
           });
-          const payload = await response.json();
-          if (!response.ok)
-            throw new Error(payload.error || "Could not read the PDF.");
-          if (!isStudyGuide(payload.reviewer))
-            throw new Error("The reviewer could not be read.");
-          const generated = {
-            reviewer: payload.reviewer,
-            fileName: file.name,
-            size: file.size,
-          };
+          controller.signal.throwIfAborted();
           saveRecord(generated);
           const id = await saveReviewerToLibrary(generated, subject);
           reviewerIds = [id];
           setSelected([id]);
           setMode("saved");
           setFile(null);
-          await load();
+          setLibrary(current => current && ({
+            ...current,
+            guides: current.guides.some(g => g.id === id) ? current.guides :
+              [...current.guides, { id, file_name: file.name, subject_id: subject }],
+          }));
           setBusy("Creating source-based questions…");
         }
         const result = await requestJson<{ testId: string; count: number }>(
@@ -160,7 +162,7 @@ function TestLibrary() {
         </div>
       )}
       {!library ? (
-        <p role="status">Opening your practice space…</p>
+        !error && <LoadingState>Opening your practice space…</LoadingState>
       ) : (
         <>
           {!library.subjects.length ? (
@@ -282,14 +284,16 @@ function TestLibrary() {
                         <strong>Choose your study material</strong>
                         <span>
                           PDF · Up to 10 MB. Its reviewer is saved to this
-                          subject.
+                          subject. In PowerPoint, choose File → Export or Save As → PDF.
                         </span>
                         <input
                           type="file"
                           accept="application/pdf,.pdf"
                           onChange={(e) => {
-                            setFile(e.target.files?.[0] ?? null);
-                            setError("");
+                            const next = e.target.files?.[0] ?? null;
+                            const invalid = next && pdfSelectionError(next);
+                            setFile(invalid ? null : next);
+                            setError(invalid || "");
                           }}
                         />
                       </label>
@@ -515,70 +519,5 @@ function BookIcon() {
     <span className="icon-tile">
       <ClipboardList size={30} />
     </span>
-  );
-}
-export function AttemptHistory({
-  history,
-}: {
-  history: {
-    id: string;
-    status: string;
-    score: number | null;
-    started_at: string;
-    practice_tests: { title: string; subject_name: string };
-  }[];
-}) {
-  return history.length ? (
-    <div className="history-table">
-      <table>
-        <thead>
-          <tr>
-            <th>Test</th>
-            <th>Date</th>
-            <th>Score</th>
-            <th>
-              <span className="sr-only">Action</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {history.map((a) => (
-            <tr key={a.id}>
-              <td>
-                <strong>{a.practice_tests.title}</strong>
-                <small>{a.practice_tests.subject_name}</small>
-              </td>
-              <td>{dateLabel(a.started_at)}</td>
-              <td>
-                {a.score !== null ? (
-                  <span className="score-pill">{a.score}%</span>
-                ) : a.status === "active" ? (
-                  "In progress"
-                ) : (
-                  "Awaiting grading"
-                )}
-              </td>
-              <td>
-                <Link
-                  className="text-link"
-                  href={"/dashboard/practice?attempt=" + a.id}
-                >
-                  {a.status === "active" ? "Resume" : "View results"}
-                  <ArrowRight size={14} />
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  ) : (
-    <div className="empty-inline">
-      <ClipboardList size={25} />
-      <p>
-        No attempts yet. Your results and progress will appear here after your
-        first test.
-      </p>
-    </div>
   );
 }

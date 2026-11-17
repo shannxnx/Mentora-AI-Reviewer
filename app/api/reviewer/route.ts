@@ -27,9 +27,11 @@ function errorStatus(value: unknown) {
 }
 
 export async function POST(request: Request) {
+  const start = performance.now();
   const db = await createClient();
   const { data } = await db.auth.getClaims();
   if (!data?.claims?.sub) return errorResponse("Sign in to generate a reviewer.", 401);
+  const authenticated = performance.now();
   const contentLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BYTES)
     return errorResponse("The uploaded PDF must be 10 MB or less.", 413);
@@ -75,6 +77,8 @@ export async function POST(request: Request) {
   try {
     const started = performance.now();
     const ai = new GoogleGenAI({ apiKey });
+    const remainingMs = Math.max(1, 55000 - (started - start));
+    const deadline = AbortSignal.timeout(Math.ceil(remainingMs));
     const interaction = await ai.interactions.create({
       model: MODEL,
       store: false,
@@ -97,7 +101,7 @@ export async function POST(request: Request) {
         mime_type: "application/json",
         schema: settings.schema,
       },
-    });
+    }, { signal: AbortSignal.any([request.signal, deadline]), retry_codes: [] });
 
     if (!interaction.output_text)
       return errorResponse(
@@ -120,18 +124,29 @@ export async function POST(request: Request) {
         502,
       );
 
+    const timings = {
+      auth: Math.round(authenticated - start),
+      pdf: Math.round(started - authenticated),
+      gemini: Math.round(performance.now() - started),
+    };
     console.info("Study guide generated", {
+      ...timings, bytes: bytes.length,
       depth,
       topics: reviewer.topics.length,
-      elapsedMs: Math.round(performance.now() - started),
       inputTokens: interaction.usage?.total_input_tokens,
       outputTokens: interaction.usage?.total_output_tokens,
     });
     return Response.json(
       { reviewer },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: {
+        "Cache-Control": "no-store",
+        "Server-Timing": Object.entries(timings).map(([stage, ms]) => stage + ";dur=" + ms).join(", "),
+      } },
     );
   } catch (error) {
+    if (request.signal.aborted) return errorResponse("Request cancelled.", 499);
+    if (error instanceof Error && /timeout|timed out|abort/i.test(error.name + " " + error.message))
+      return errorResponse("Generation took too long. Try Concise depth or upload a shorter section.", 504);
     const status = errorStatus(error);
     if (status === 429)
       return errorResponse(

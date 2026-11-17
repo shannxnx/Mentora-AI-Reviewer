@@ -1,46 +1,10 @@
-/* Shared learning surfaces: practice, progress, and student identity. */
-.mentora-theme {
-  --primary: 216 68% 49%;
-  --ring: 216 68% 49%;
-}
-.mentora-app[data-subjects] {
-  background: #f7f9fc;
-}
-.mentora-app[data-subjects] .mentora-sidebar {
-  border-color: #e2e9f2;
-}
-.mentora-app[data-subjects] .mentora-nav a[aria-current="page"] {
-  color: #2466c5;
-  background: #eaf2ff;
-}
-.mentora-app[data-subjects] .mentora-nav a:hover {
-  background: #f1f6fd;
-}
-.mentora-app[data-subjects] .avatar {
-  background: #edf4ff;
-  color: #3475cd;
-}
-.mentora-app[data-subjects] .mentora-button.primary {
-  background: #286bd2;
-}
-.mentora-app[data-subjects] .subject-tile {
-  border-color: #d9e3f0;
-  color: #2d4b72;
-  box-shadow: 0 3px 12px #31517e04;
-}
-.mentora-app[data-subjects] .subject-tile:hover {
-  border-color: #8db4ed;
-  background: #fbfdff;
-}
-.mentora-app[data-subjects] .subject-glyph {
-  color: #4d85d2;
-}
+/* Practice, progress, and profile layouts. */
 .learning-page {
   display: grid;
   gap: 26px;
   max-width: 1180px;
   margin: auto;
-  color: #20334d;
+  color: var(--mentora-text);
 }
 .learning-heading,
 .section-heading,
@@ -54,10 +18,10 @@
   flex-wrap: wrap;
 }
 .learning-heading h1 {
-  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  font-size: clamp(1.8rem, 3vw, 2.3rem);
   line-height: 1.2;
-  font-weight: 750;
-  letter-spacing: -0.8px;
+  font-weight: 650;
+  letter-spacing: -.035em;
   margin: 7px 0 10px;
 }
 .learning-heading p,
@@ -66,7 +30,7 @@
   line-height: 1.65;
 }
 .learning-eyebrow {
-  font-size: 10px !important;
+  font-size: 12px !important;
   letter-spacing: 1.8px;
   font-weight: 750;
   color: #4776b9 !important;
@@ -75,10 +39,10 @@
 .learning-card {
   min-width: 0;
   background: #fff;
-  border: 1px solid #e0e8f2;
-  border-radius: 18px;
+  border: 1px solid var(--mentora-border);
+  border-radius: 16px;
   padding: 26px;
-  box-shadow: 0 3px 15px #294b7d04;
+  box-shadow: var(--mentora-shadow);
 }
 .learning-card h2,
 .learning-page > section > div > h2 {
@@ -105,7 +69,7 @@
   background: #f0f6ff;
   color: #4372b1;
   border-radius: 7px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
 }
 .learning-button,
@@ -116,21 +80,21 @@
   gap: 9px;
   border: 1px solid transparent;
   border-radius: 9px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 10px 16px;
   font-weight: 650;
   font-size: 13px;
   cursor: pointer;
   text-align: center;
-  transition: background 0.15s;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 .learning-button {
-  background: #286bd2;
+  background: var(--mentora-accent);
   color: #fff !important;
-  box-shadow: 0 3px 7px #286bd218;
+  box-shadow: 0 2px 5px #295db81a;
 }
 .learning-button:hover {
-  background: #205bbb;
+  background: #224f9d;
 }
 .small-button {
   background: #fff;
@@ -152,7 +116,7 @@
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  color: #286bd2;
+  color: var(--mentora-accent);
   font-size: 12px;
   font-weight: 650;
   cursor: pointer;
@@ -176,7 +140,7 @@
 }
 .field-label small {
   display: block;
-  color: #718198;
+  color: #5c6a80;
   font-weight: 400;
   margin-top: 4px;
 }
@@ -191,7 +155,7 @@
 .learning-form label:not(.choice-row) {
   display: grid;
   gap: 8px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 650;
   color: #465d7a;
 }
@@ -218,7 +182,7 @@
   outline: 2px solid #bad7ff;
 }
 .learning-form input[type="checkbox"] {
-  accent-color: #286bd2;
+  accent-color: var(--mentora-accent);
   width: 16px;
   height: 16px;
   flex-shrink: 0;
@@ -232,9 +196,10 @@
   display: flex !important;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
+  font-size: 14px;
   cursor: pointer;
   overflow-wrap: anywhere;
+  line-height: 1.5;
 }
 .practice-layout {
   display: grid;
@@ -259,14 +224,15 @@
 }
 .learning-segment button {
   flex: 1;
-  font-size: 12px;
+  font-size: 13px;
   padding: 9px;
   border-radius: 6px;
-  color: #627792;
+  color: #526681;
+  min-height: 40px;
 }
 .learning-segment button[aria-pressed="true"] {
   background: #fff;
-  color: #286bd2;
+  color: var(--mentora-accent);
   box-shadow: 0 1px 4px #283e6510;
   font-weight: 650;
 }
@@ -310,7 +276,7 @@
   color: #7085a1;
 }
 .upload-source input {
-  font-size: 11px !important;
+  font-size: 13px;
 }
 .blue-card {
   background: linear-gradient(145deg, #edf5ff, #f8fbff);
@@ -374,12 +340,12 @@
 }
 .list-row small {
   display: block;
-  font-size: 11px;
-  color: #7a8ba3;
+  font-size: 12px;
+  color: #5c6a80;
   margin-top: 4px;
 }
 .list-row .small-button {
-  font-size: 11px;
+  font-size: 12px;
   min-height: 32px;
   padding: 6px 12px;
 }
@@ -441,19 +407,19 @@
   white-space: nowrap;
 }
 .history-table th {
-  font-size: 10px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
   font-weight: 650;
-  color: #8b9cb2;
+  color: #56657b;
   padding: 12px 12px;
   background: #f7f9fc;
 }
 .history-table td {
   padding: 16px 12px;
   border-bottom: 1px solid #eef2f6;
-  font-size: 12px;
-  color: #71839c;
+  font-size: 13px;
+  color: #5c6a80;
 }
 .history-table td strong {
   display: block;
@@ -462,7 +428,7 @@
 }
 .history-table td small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 4px;
 }
 .history-table td:last-child {
@@ -475,7 +441,7 @@
   border-radius: 6px;
   background: #edf7f1;
   color: #287452;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 .score-pill.needs-review {
@@ -489,15 +455,15 @@
   align-items: center;
   margin-top: 20px;
   font-size: 12px;
-  color: #74859c;
+  color: #5c6a80;
 }
 .history-pagination .small-button {
   min-height: 32px;
   padding: 6px 12px;
 }
 .test-topbar {
-  font-size: 11px;
-  color: #8493a9;
+  font-size: 12px;
+  color: #5c6a80;
 }
 .timer {
   display: flex;
@@ -525,8 +491,8 @@
   padding: 32px;
 }
 .question-topic {
-  font-size: 11px;
-  color: #7e93b0 !important;
+  font-size: 12px;
+  color: #5c6a80 !important;
   margin: 16px 0 10px;
 }
 .question-prompt {
@@ -550,12 +516,13 @@
   border-radius: 10px;
   padding: 15px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
   white-space: pre-wrap;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 .answer-option input {
-  accent-color: #286bd2;
+  accent-color: var(--mentora-accent);
 }
 .answer-option.selected {
   border-color: #82ade8;
@@ -565,8 +532,8 @@
   flex: 1;
 }
 .option-letter {
-  color: #7b93b2;
-  font-size: 11px;
+  color: #5c6a80;
+  font-size: 12px;
   font-weight: 700;
 }
 .answer-option svg {
@@ -574,9 +541,9 @@
 }
 .answer-fields small {
   display: block;
-  color: #7d8da4;
+  color: #5c6a80;
   margin-top: 10px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .question-footer {
   border-top: 1px solid #edf1f7;
@@ -594,19 +561,19 @@
   border: 1px solid #dae3ef;
   border-radius: 7px;
   font-size: 12px;
-  color: #7890b0;
+  color: #5c6a80;
 }
 .question-grid button.answered {
   background: #e8f2ff;
-  color: #286bd2;
+  color: var(--mentora-accent);
   border-color: #b7d5ff;
 }
 .question-grid button[aria-current] {
-  outline: 2px solid #286bd2;
+  outline: 2px solid var(--mentora-accent);
   outline-offset: 2px;
 }
 .question-nav p {
-  font-size: 11px;
+  font-size: 12px;
   margin-bottom: 20px;
 }
 .submit-confirm {
@@ -652,8 +619,8 @@
   font-weight: 750;
 }
 .score-circle span {
-  font-size: 11px;
-  color: #8ba1bf;
+  font-size: 12px;
+  color: #5c6a80;
 }
 .topic-grid {
   display: grid;
@@ -672,7 +639,7 @@
   font-weight: 600;
 }
 .topic-item span {
-  color: #4f79b4;
+  color: #456da4;
 }
 .topic-item progress {
   width: 100%;
@@ -695,8 +662,8 @@
   background: #6fa2e6;
 }
 .topic-item small {
-  font-size: 10px;
-  color: #8497b0;
+  font-size: 12px;
+  color: #5c6a80;
   display: block;
   margin-top: 7px;
 }
@@ -717,9 +684,9 @@
 }
 .review-answer-grid small {
   text-transform: uppercase;
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 1px;
-  color: #869cba;
+  color: #5c6a80;
   font-weight: 700;
 }
 .review-answer-grid p {
@@ -801,7 +768,7 @@
   padding-left: 30px;
   display: grid;
   gap: 15px;
-  font-size: 11px;
+  font-size: 12px;
   align-content: center;
 }
 .identity-details > div {
@@ -813,7 +780,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  color: #8196b1;
+  color: #5c6a80;
 }
 .identity-details dd {
   color: #486282;
@@ -832,8 +799,8 @@
 }
 .stat-card > div > span {
   display: block;
-  color: #7a8da7;
-  font-size: 10px;
+  color: #5c6a80;
+  font-size: 13px;
   font-weight: 550;
 }
 .stat-card strong {
@@ -846,8 +813,8 @@
 }
 .stat-card small {
   display: block;
-  font-size: 9px;
-  color: #98a8bc;
+  font-size: 12px;
+  color: #5c6a80;
 }
 .stat-card .icon-tile {
   width: 40px;
@@ -897,14 +864,14 @@
   text-align: center;
   gap: 8px;
   height: 100%;
-  color: #6d8cb4;
-  font-size: 10px;
+  color: #526f98;
+  font-size: 12px;
 }
 .trend-column strong {
   font-weight: 600;
 }
 .trend-column small {
-  font-size: 8px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .trend-track {
@@ -923,8 +890,8 @@
   min-height: 3px;
 }
 .fine-print {
-  font-size: 10px !important;
-  color: #98a7bb !important;
+  font-size: 12px !important;
+  color: #5c6a80 !important;
   line-height: 1.6;
   margin-top: 20px;
 }
@@ -1026,7 +993,7 @@
     align-items: flex-start;
   }
   .learning-heading > .small-button {
-    font-size: 11px;
+    font-size: 12px;
     padding: 8px 10px;
     min-height: 34px;
   }
@@ -1052,7 +1019,7 @@
     font-size: 22px;
   }
   .identity-main p {
-    font-size: 10px;
+    font-size: 12px;
   }
   .identity-details {
     grid-template-columns: 1fr;
@@ -1079,10 +1046,10 @@
     font-size: 22px;
   }
   .stat-card > div > span {
-    font-size: 9px;
+    font-size: 12px;
   }
   .stat-card small {
-    font-size: 8px;
+    font-size: 12px;
   }
   .topic-grid,
   .review-answer-grid {
@@ -1109,7 +1076,7 @@
     gap: 10px;
   }
   .question-footer button {
-    font-size: 11px;
+    font-size: 12px;
     padding: 9px 11px;
   }
   .result-hero {
@@ -1140,7 +1107,7 @@
     gap: 12px 8px;
   }
   .choice-row {
-    font-size: 11px;
+    font-size: 12px;
   }
   .form-grid {
     gap: 12px;
@@ -1149,6 +1116,6 @@
     gap: 6px;
   }
   .trend-column small {
-    font-size: 7px;
+    font-size: 12px;
   }
 }

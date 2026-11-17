@@ -2,7 +2,6 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { unseal } from "./crypto";
-import { gradeTest } from "./ai";
 import type { Attempt } from "./model";
 
 export const json = (data: unknown, status = 200) =>
@@ -54,7 +53,9 @@ export async function body(request: Request) {
   if (raw.length > 300000)
     throw new RequestError("This request is too large.", 413);
   try {
-    return JSON.parse(raw);
+    const input = JSON.parse(raw);
+    if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error();
+    return input;
   } catch {
     throw new RequestError("Invalid request.");
   }
@@ -94,6 +95,7 @@ export async function finishAttempt(
       .single();
     if (error) throw error;
     const key = unseal(test.encrypted_key);
+    const { gradeTest } = await import("./ai");
     const result = await gradeTest(key.keys, latest.answers);
     const { data: saved, error: saveError } = await db.rpc("practice_finish", {
       p_attempt: attempt.id,

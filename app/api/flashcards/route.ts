@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
-import { parseStoredReviewer } from "@/lib/reviewer/pdf-reviewer";
+import { parseReviewerRecord } from "@/lib/reviewer/pdf-reviewer";
 import { generateCards } from "@/lib/flashcards/generate";
 import { sourceTopics, validSettings } from "@/lib/flashcards/model";
 
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     .maybeSingle();
   if (error || !guide)
     return fail("Reviewer unavailable for this account.", 404);
-  const record = parseStoredReviewer(JSON.stringify(guide.snapshot));
+  const record = parseReviewerRecord(guide.snapshot);
   if (!record) return fail("The saved reviewer could not be read.", 422);
   if (
     input.cardId !== undefined &&

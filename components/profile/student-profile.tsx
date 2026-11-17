@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { dateLabel, requestJson } from "@/lib/learning/http";
 import { profileLimits, type StudentProfile } from "@/lib/profile/model";
-import { AttemptHistory } from "@/components/practice/practice-workspace";
+import { AttemptHistory } from "@/components/practice/attempt-history";
 
 type ProfileData = {
   profile: StudentProfile;

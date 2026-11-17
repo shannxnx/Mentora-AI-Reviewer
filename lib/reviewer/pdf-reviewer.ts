@@ -1,4 +1,4 @@
-import { isStudyGuide, type StudyGuide } from "./study-guide";
+import { isStudyGuide, type StudyGuide, type StudyDepth } from "./study-guide";
 
 export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
@@ -26,13 +26,18 @@ export type ReviewerRecord = {
   size: number;
   reviewer: Reviewer | StudyGuide;
   completedTopics?: number[];
+  sourceHash?: string;
+  depth?: StudyDepth;
 };
 
 export function pdfSelectionError(
   file: Pick<File, "name" | "size">,
 ): string | null {
   if (!file.name.toLowerCase().endsWith(".pdf"))
-    return "Choose a PDF file (.pdf). Other file types are not supported yet.";
+    return /\.pptx?$/i.test(file.name)
+      ? "In PowerPoint, choose File → Export or Save As, select PDF, then upload the exported file."
+      : "Choose a PDF file (.pdf).";
+  if (file.name.length > 255) return "Shorten the PDF file name to 255 characters or fewer.";
   if (file.size === 0) return "This file is empty. Choose a PDF with content.";
   if (file.size > MAX_PDF_BYTES)
     return "This PDF is too large. Choose a file of 10 MB or less.";
@@ -114,26 +119,31 @@ export function parseReviewer(value: unknown): Reviewer | null {
 export function parseStoredReviewer(value: string | null): ReviewerRecord | null {
   if (!value) return null;
   try {
-    const data: unknown = JSON.parse(value);
-    if (
-      !isObject(data) ||
-      !isText(data.fileName, 255) ||
-      typeof data.size !== "number" ||
-      !Number.isInteger(data.size) ||
-      data.size < 5 ||
-      pdfSelectionError({ name: data.fileName, size: data.size })
-    )
-      return null;
-    const reviewer = isStudyGuide(data.reviewer) ? data.reviewer : parseReviewer(data.reviewer);
-    if (!reviewer) return null;
-    const count = "topics" in reviewer ? reviewer.topics.length : 0;
-    const completedTopics = Array.isArray(data.completedTopics)
-      ? [...new Set<number>(data.completedTopics.filter((n) => Number.isInteger(n) && n >= 0 && n < count))]
-      : [];
-    return { fileName: data.fileName, size: data.size, reviewer, completedTopics };
+    return parseReviewerRecord(JSON.parse(value));
   } catch {
     return null;
   }
+}
+
+export function parseReviewerRecord(data: unknown): ReviewerRecord | null {
+  if (
+    !isObject(data) ||
+    !isText(data.fileName, 255) ||
+    typeof data.size !== "number" ||
+    !Number.isInteger(data.size) ||
+    data.size < 5 ||
+    pdfSelectionError({ name: data.fileName, size: data.size })
+  )
+    return null;
+  const reviewer = isStudyGuide(data.reviewer) ? data.reviewer : parseReviewer(data.reviewer);
+  if (!reviewer) return null;
+  const count = "topics" in reviewer ? reviewer.topics.length : 0;
+  const completedTopics = Array.isArray(data.completedTopics)
+    ? [...new Set<number>(data.completedTopics.filter((n) => Number.isInteger(n) && n >= 0 && n < count))]
+    : [];
+  const sourceHash = typeof data.sourceHash === "string" && /^[a-f0-9]{64}$/.test(data.sourceHash) ? data.sourceHash : undefined;
+  const depth = data.depth === "balanced" || data.depth === "concise" ? data.depth : undefined;
+  return { fileName: data.fileName, size: data.size, reviewer, completedTopics, sourceHash, depth };
 }
 
 export function formatPdfSize(bytes: number) {

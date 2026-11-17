@@ -15,7 +15,8 @@ export async function updateSession(request: NextRequest) {
     if (pathname === "/auth/update-password") callback.searchParams.set("next", pathname);
     return NextResponse.redirect(callback);
   }
-  if (pathname === "/api/reviewer" || pathname === "/api/flashcards") {
+  // These handlers validate the account and return JSON when a session expires.
+  if (["/api/reviewer", "/api/flashcards", "/api/profile", "/api/practice", "/api/practice/attempt"].includes(pathname)) {
     return supabaseResponse;
   }
 

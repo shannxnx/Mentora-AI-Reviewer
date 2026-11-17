@@ -10,14 +10,16 @@ export function ReviewerViewer({
   record,
   onChooseAnother,
   archived = false,
+  backLabel,
 }: {
   record: ReviewerRecord;
   archived?: boolean;
+  backLabel?: string;
   onChooseAnother: () => void;
 }) {
   const reviewer = record.reviewer;
   if ("version" in reviewer) {
-    return <><ActivityTracker kind="reviewer" resource={record.fileName} title={reviewer.title} /><StudyGuideView archived={archived} guide={reviewer} record={record} onChooseAnother={onChooseAnother} /></>;
+    return <><ActivityTracker kind="reviewer" resource={record.fileName} title={reviewer.title} /><StudyGuideView backLabel={backLabel} archived={archived} guide={reviewer} record={record} onChooseAnother={onChooseAnother} /></>;
   }
   return (
     <section className="reviewer-output" aria-label="Generated reviewer">
@@ -31,7 +33,7 @@ export function ReviewerViewer({
           <h2>{reviewer.title}</h2>
         </div>
         <button className="mentora-button secondary" onClick={onChooseAnother}>
-          <RotateCcw size={16} /> {archived ? "Back to flashcards" : "Choose another PDF"}
+          <RotateCcw size={16} /> {backLabel ?? (archived ? "Back to flashcards" : "Choose another PDF")}
         </button>
       </div>
       <div className="reviewer-disclaimer">

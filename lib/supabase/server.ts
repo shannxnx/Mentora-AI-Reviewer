@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { cache } from "react";
 import { cookies } from "next/headers";
 
 /**
@@ -32,3 +33,10 @@ export async function createClient() {
     },
   );
 }
+
+// Share the verified account only within the current Server Component render.
+export const workspaceAccount = cache(async () => {
+  const db = await createClient();
+  const { data: { user } } = await db.auth.getUser();
+  return { db, user };
+});

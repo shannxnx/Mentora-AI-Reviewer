@@ -1,12 +1,14 @@
 "use client";
 
+import { LoadingState } from "@/components/layout/loading-state";
 import Link from "next/link";
 import { saveReviewerToLibrary } from "@/lib/reviewer/library";
-import { useSearchParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, ArrowUpRight, FileText, Layers, History, Plus } from "lucide-react";
 import { SubjectDirectory, subjectsPath } from "./subject-directory";
+import { SubjectOverview } from "./subject-overview";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { parseStoredReviewer } from "@/lib/reviewer/pdf-reviewer";
+import { loadSubjects, loadSubjectLibrary, loadGuide, loadDeckCards } from "@/lib/flashcards/library";
 import { createClient } from "@/lib/supabase/client";
 import { useStudentReviewer } from "@/components/features/student-reviewer-provider";
 import { ReviewerViewer } from "@/components/features/reviewer-viewer";
@@ -19,30 +21,28 @@ import {
   lengths,
   type Settings,
   type Deck,
-  type Card,
   type SavedGuide,
-  type Subject,
-  type Review,
 } from "@/lib/flashcards/model";
 
 type Page = "subjects" | "flashcards" | "courses";
-type Library = {
-  subjects: Subject[];
-  guides: SavedGuide[];
-  decks: Deck[];
-  cards: Card[];
-  reviews: Review[];
-};
-const empty: Library = {
-  subjects: [],
-  guides: [],
-  decks: [],
-  cards: [],
-  reviews: [],
-};
+function useLibraryResource<T>(load: (signal: AbortSignal) => Promise<T>, revision: number) {
+  const [result, setResult] = useState<{ load: typeof load; data?: T; error?: string }>();
+  useEffect(() => {
+    const controller = new AbortController();
+    load(controller.signal).then(data => {
+      if (!controller.signal.aborted) setResult({ load, data });
+    }).catch(error => {
+      if (!controller.signal.aborted) setResult({ load, error: messageFor(error) });
+    });
+    return () => controller.abort();
+  }, [load, revision]);
+  return result?.load === load ? result : undefined;
+}
 
 export function FlashcardWorkspace({ page }: { page: Page }) {
-  const subjectParam = useSearchParams().get("subject");
+  const params = useSearchParams();
+  const subjectParam = params.get("subject");
+  const initialGuide = params.get("guide") || "";
   const [account, setAccount] = useState<
     { id: string; teacher: boolean } | null | undefined
   >(undefined);
@@ -64,7 +64,7 @@ export function FlashcardWorkspace({ page }: { page: Page }) {
   const path =
     page === "courses" ? "/demo/teacher/courses" : "/dashboard/" + page;
   if (account === undefined)
-    return <p role="status">Opening your study space…</p>;
+    return <LoadingState>Opening your study space…</LoadingState>;
   if (page === "subjects" && (!account || !subjectParam))
     return <SubjectDirectory key={account?.id ?? "visitor"} owner={account?.id ?? null} />;
   if (!account)
@@ -96,7 +96,7 @@ export function FlashcardWorkspace({ page }: { page: Page }) {
       </p>
     );
   const selected = page === "subjects" ? subjectParam : null;
-  return <LibraryView key={account.id + page + (selected ?? "")} owner={account.id} page={page} selected={selected} />;
+  return <LibraryView key={account.id + page + (selected ?? "") + initialGuide} owner={account.id} page={page} selected={selected} initialGuide={initialGuide} />;
 }
 
 function Enrollment() {
@@ -174,80 +174,43 @@ function messageFor(e: unknown) {
   return "Could not complete the request. Please try again.";
 }
 
-function LibraryView({ owner, page, selected }: { owner: string; page: Page; selected: string | null }) {
+function LibraryView({ owner, page, selected, initialGuide }: { owner: string; page: Page; selected: string | null; initialGuide: string }) {
+  const router = useRouter();
   const { record } = useStudentReviewer();
-  const [data, setData] = useState<Library>(empty);
-  const [subjectId, selectSubject] = useState(selected ?? ""),
-    [guideId, selectGuide] = useState(""),
-    [deckId, selectDeck] = useState("");
-  const [read, setRead] = useState(false),
-    [subjectName, setSubjectName] = useState(""),
-    [folder, setFolder] = useState("");
-  const [busy, setBusy] = useState(false),
-    [notice, setNotice] = useState(""),
-    [loading, setLoading] = useState(true);
+  const [chosenSubject, selectSubject] = useState(selected ?? "");
+  const [guideId, selectGuide] = useState(initialGuide);
+  const [deckId, selectDeck] = useState("");
+  const [read, setRead] = useState(Boolean(initialGuide));
+  const [configuring, setConfiguring] = useState(false);
+  const [overviewView, setOverviewView] = useState<"reviewers" | "flashcards">("reviewers");
+  const [subjectName, setSubjectName] = useState("");
+  const [folder, setFolder] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [revision, refresh] = useState(0);
+  const [subjectRevision, refreshSubjects] = useState(0);
   const lock = useRef(false);
-  const active = useRef(true);
-  const load = useCallback(async () => {
-    const db = createClient();
-    async function rows(
-      table: string,
-      columns: string,
-      order = "id",
-      limit?: number,
-    ) {
-      const result = [];
-      for (let start = 0; ; start += 500) {
-        const { data, error } = await db
-          .from(table)
-          .select(columns)
-          .eq("owner_id", owner)
-          .order(order, { ascending: !limit })
-          .range(start, start + (limit ?? 500) - 1);
-        if (error) throw error;
-        result.push(...data);
-        if (limit || data.length < 500) break;
-      }
-      return result;
-    }
-    const [subjects, guides, decks, cards, reviews] = await Promise.all([
-      rows("study_subjects", "id,name,enrolled_by"),
-      rows("study_reviewers", "id,subject_id,file_name,folder,snapshot"),
-      rows("study_decks", "id,title,reviewer_id,settings_key"),
-      rows(
-        "study_cards",
-        "id,deck_id,topic,front,back,evidence,origin,revision,due_at,last_rating",
-      ),
-      rows("study_reviews", "deck_id,reviewed_at", "reviewed_at", 30),
-    ]);
-    if (!active.current) return;
-    const library = {
-      subjects,
-      guides,
-      decks,
-      cards,
-      reviews,
-    } as unknown as Library;
-    library.guides = library.guides.flatMap((guide) => {
-      const snapshot = parseStoredReviewer(JSON.stringify(guide.snapshot));
-      return snapshot ? [{ ...guide, snapshot }] : [];
-    });
-    setData(library);
-    selectSubject((current) => current || library.subjects[0]?.id || "");
-  }, [owner]);
-  useEffect(() => {
-    active.current = true;
-    load()
-      .catch((e) => {
-        if (active.current) setNotice(messageFor(e));
-      })
-      .finally(() => {
-        if (active.current) setLoading(false);
-      });
-    return () => {
-      active.current = false;
-    };
-  }, [load]);
+  const directory = useLibraryResource(useCallback(
+    (signal: AbortSignal) => loadSubjects(owner, signal), [owner]), subjectRevision);
+  const subjects = directory?.data;
+  const subjectId = chosenSubject || subjects?.[0]?.id || "";
+  const subject = subjects?.find(item => item.id === subjectId);
+  const library = useLibraryResource(useCallback(
+    async (signal: AbortSignal) => subjectId ? loadSubjectLibrary(owner, subjectId, signal) : null,
+    [owner, subjectId]), revision);
+  const guides = library?.data?.guides ?? [];
+  const decks = library?.data?.decks ?? [];
+  const deck = decks.find(d => d.id === deckId);
+  const detail = useLibraryResource(useCallback(
+    async (signal: AbortSignal) => guideId && subjectId ? loadGuide(owner, subjectId, guideId, signal) : null,
+    [guideId, subjectId, owner]), revision);
+  const cardList = useLibraryResource(useCallback(
+    async (signal: AbortSignal) => deckId ? loadDeckCards(owner, deckId, signal) : [],
+    [owner, deckId]), revision);
+  const guide = detail?.data;
+  const error = directory?.error || library?.error || detail?.error || cardList?.error;
+  const loading = !error && (!subjects || (subjectId && !library) || (guideId && !detail) || (deckId && !cardList));
+
   async function run(task: () => Promise<void>) {
     if (lock.current) return;
     lock.current = true;
@@ -255,7 +218,7 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
     setNotice("");
     try {
       await task();
-      await load();
+      refresh(n => n + 1);
     } catch (e) {
       setNotice(messageFor(e));
     } finally {
@@ -263,17 +226,6 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
       setBusy(false);
     }
   }
-  const guides = data.guides.filter((g) => g.subject_id === subjectId);
-  const subject = data.subjects.find((item) => item.id === subjectId);
-  const guide = guides.find((g) => g.id === guideId);
-  const decks = data.decks.filter((d) =>
-    guides.some((g) => g.id === d.reviewer_id),
-  );
-  const deck = decks.find((d) => d.id === deckId);
-  const deckGuide = guides.find((g) => g.id === deck?.reviewer_id);
-  const scopedCards = data.cards.filter((c) =>
-    decks.some((d) => d.id === c.deck_id),
-  );
   function pickSubject(id: string) {
     selectSubject(id);
     selectGuide("");
@@ -291,9 +243,9 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
     const id = await saveReviewerToLibrary(record, subjectId, folder.trim() || null);
     selectGuide(id);
     selectDeck("");
-    setNotice("Reviewer ready. Choose topics or generate a deck below.");
+    setNotice(page === "subjects" ? "Reviewer saved to this subject." : "Reviewer ready. Choose topics or generate a deck below.");
   }
-  const recent = data.reviews
+  const recent = library?.data?.recent
     .map((r) => decks.find((d) => d.id === r.deck_id))
     .find((d) => !!d);
   return (
@@ -302,41 +254,69 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
         {page === "subjects" ? (
           <Link className="subject-back" href={subjectsPath}><ArrowLeft size={16} />All subjects</Link>
         ) : <p className="guide-kicker">Study library</p>}
-        <h1>{page === "subjects" ? subject?.name ?? "Subject" : "Flashcards"}</h1>
-        {subject && <Link className="text-link" href={"/dashboard/practice?subject=" + subject.id}>Practice this subject →</Link>}
+        <div className="subject-detail-heading">
+          <div><h1>{page === "subjects" ? subject?.name ?? "Subject" : "Flashcards"}</h1>
+            {page === "subjects" && subject && <p>Your reviewers, flashcards, and practice in one place.</p>}
+          </div>
+          {page === "subjects" && subject && <Link className="mentora-button primary" href={"/dashboard/generate?" + new URLSearchParams({ subject: subject.id, new: "1" })}><Plus size={18} aria-hidden="true" />Add a PDF</Link>}
+        </div>
+        {page !== "subjects" && subject && <Link className="text-link" href={"/dashboard/practice?subject=" + subject.id}>Practice this subject →</Link>}
       </header>
       {notice && (
         <p role="status" className="fc-notice">
           {notice}
         </p>
       )}
-      {loading ? (
-        <p>Loading your library…</p>
+      {error ? (
+        <div className="fc-notice" role="alert">{error}{" "}
+          <button className="text-link" onClick={() => { refresh(n => n + 1); refreshSubjects(n => n + 1); }}>Try again</button>
+          {guideId && <button className="text-link" onClick={() => { selectGuide(""); selectDeck(""); setRead(false); }}>Back to library</button>}
+        </div>
+      ) : loading ? (
+        <LoadingState>Loading your library…</LoadingState>
       ) : selected && !subject ? (
         <p>{notice ? "Return to all subjects to try again." : "This subject is unavailable in your library."}</p>
       ) : read && guide ? (
         <section className="fc-panel">
-          <button onClick={() => setRead(false)}>Back to flashcards</button>
           <ReviewerViewer
             record={guide.snapshot}
-            onChooseAnother={() => setRead(false)}
+            onChooseAnother={() => {
+              setRead(false);
+              if (page === "subjects") {
+                selectDeck("");
+                setConfiguring(false);
+                router.push(subjectsPath + "?subject=" + subjectId);
+              }
+            }}
+            backLabel={page === "subjects" ? "Back to subject" : undefined}
             archived
           />
         </section>
-      ) : deck && deckGuide ? (
+      ) : deck && guide ? (
         <DeckDetail
           key={deck.id}
           deck={deck}
-          guide={deckGuide}
-          cards={data.cards.filter((c) => c.deck_id === deck.id)}
+          guide={guide}
+          cards={cardList?.data ?? []}
           run={run}
           busy={busy}
-          close={() => selectDeck("")}
+          close={() => {
+            selectDeck("");
+            if (page === "subjects") { selectGuide(""); setConfiguring(false); setOverviewView("flashcards"); }
+          }}
           openGuide={() => {
             selectGuide(deck.reviewer_id);
             setRead(true);
           }}
         />
+      ) : page === "subjects" && subject ? (
+        configuring && guide ? <>
+          <button className="subject-back" onClick={() => { setConfiguring(false); selectGuide(""); }}> <ArrowLeft size={16} aria-hidden="true" />Back to reviewers</button>
+          <GuideSettings key={guide.id} guide={guide} busy={busy} run={run} onRead={() => router.push(subjectsPath + "?" + new URLSearchParams({ subject: subjectId, guide: guide.id }))} onDeck={selectDeck} />
+        </> : <SubjectOverview subject={subject} guides={guides} decks={decks} record={record} busy={busy} view={overviewView} onView={setOverviewView}
+          onSave={() => run(saveReviewer)}
+          onConfigure={id => { selectGuide(id); setConfiguring(true); }}
+          onDeck={openDeck} />
       ) : (
         <>
           {page === "flashcards" && <section className="fc-panel">
@@ -345,7 +325,7 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
               Choose a subject you added or one your teacher enrolled you in.
             </p>
             <div className="fc-actions">
-              {data.subjects.map((s) => (
+              {subjects?.map((s) => (
                 <button
                   key={s.id}
                   disabled={busy}
@@ -356,7 +336,7 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
                 </button>
               ))}
             </div>
-            <form
+            <form className="fc-add-subject"
               onSubmit={(e) => {
                 e.preventDefault();
                 run(async () => {
@@ -366,6 +346,7 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
                     .select("id")
                     .single();
                   if (error) throw error;
+                  refreshSubjects(n => n + 1);
                   pickSubject(data.id);
                   setSubjectName("");
                 });
@@ -381,7 +362,7 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
                   placeholder="e.g. Biology"
                 />
               </label>
-              <button disabled={busy}>Add subject</button>
+              <button className="fc-primary" disabled={busy || !subjectName.trim()}>Add subject</button>
             </form>
           </section>}
           {subjectId && (
@@ -391,7 +372,7 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
                   {selected ? "Reviewers" : "Reviewers in " + subject?.name}
                 </h2>
                 {record && (
-                  <div>
+                  <div className="fc-current-reviewer">
                     <p>
                       Current reviewer ·{" "}
                       <strong>{record.reviewer.title}</strong>
@@ -406,7 +387,7 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
                         onChange={(e) => setFolder(e.target.value)}
                       />
                     </label>
-                    <button disabled={busy} onClick={() => run(saveReviewer)}>
+                    <button className="fc-primary" disabled={busy} onClick={() => run(saveReviewer)}>
                       Save current reviewer to this subject
                     </button>
                   </div>
@@ -427,29 +408,25 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
                   </p>
                 )}
                 {[...new Set(guides.map((g) => g.folder))].sort().map((f) => (
-                  <div key={f ?? ""}>
-                    <h3>{f ?? "No folder"}</h3>
-                    {guides
+                  <div className="fc-reviewer-group" key={f ?? ""}>
+                    {f && <h3>{f}</h3>}
+                    <div className="fc-reviewer-list">{guides
                       .filter((g) => g.folder === f)
                       .map((g) => (
                         <button
+                          className="fc-library-item"
                           key={g.id}
                           disabled={busy}
                           aria-pressed={g.id === guideId}
                           onClick={() => selectGuide(g.id)}
                         >
-                          {g.snapshot.reviewer.title} ·{" "}
-                          {
-                            data.cards.filter((c) =>
-                              decks.some(
-                                (d) =>
-                                  d.id === c.deck_id && d.reviewer_id === g.id,
-                              ),
-                            ).length
-                          }{" "}
-                          cards
+                          <FileText size={21} aria-hidden="true" />
+                          <span><strong>{g.title || g.file_name}</strong>
+                            <small>{decks.filter(d => d.reviewer_id === g.id).reduce((total, d) => total + d.count, 0)} cards</small>
+                          </span>
+                          <ArrowUpRight size={16} aria-hidden="true" />
                         </button>
-                      ))}
+                      ))}</div>
                   </div>
                 ))}
               </section>
@@ -466,29 +443,22 @@ function LibraryView({ owner, page, selected }: { owner: string; page: Page; sel
               <section className="fc-panel">
                 <h2>My decks</h2>
                 <p>
-                  {
-                    scopedCards.filter(
-                      (c) => Date.parse(c.due_at) <= Date.now(),
-                    ).length
-                  }{" "}
-                  cards due or new ·{" "}
-                  {scopedCards.filter((c) => c.last_rating === "known").length}{" "}
+                  {decks.reduce((total, d) => total + d.due, 0)} cards due or new ·{" "}
+                  {decks.reduce((total, d) => total + d.known, 0)}{" "}
                   last marked Known
                 </p>
                 {recent && (
-                  <button onClick={() => openDeck(recent)}>
-                    Recently studied · {recent.title}
+                  <button className="fc-recent" onClick={() => openDeck(recent)}>
+                    <History size={16} aria-hidden="true" /> Recently studied · {recent.title}
                   </button>
                 )}
-                {decks.map((d) => (
-                  <div key={d.id}>
-                    <button onClick={() => openDeck(d)}>
-                      {d.title} ·{" "}
-                      {scopedCards.filter((c) => c.deck_id === d.id).length}{" "}
-                      cards
-                    </button>
-                  </div>
-                ))}
+                <div className="fc-deck-list">{decks.map((d) => (
+                  <button className="fc-library-item" key={d.id} onClick={() => openDeck(d)}>
+                    <Layers size={21} aria-hidden="true" />
+                    <span><strong>{d.title}</strong><small>{d.count} cards · {d.due} due</small></span>
+                    <ArrowUpRight size={16} aria-hidden="true" />
+                  </button>
+                ))}</div>
                 {!decks.length && (
                   <p>Select a saved reviewer above to create the first deck.</p>
                 )}
@@ -591,7 +561,7 @@ function GuideSettings({
               </label>
             ))}
           </fieldset>
-          {(
+          <div className="fc-settings-grid">{(
             [
               ["difficulty", difficulties],
               ["style", styles],
@@ -613,7 +583,7 @@ function GuideSettings({
                 ))}
               </select>
             </label>
-          ))}
+          ))}</div>
         </details>
         <button className="fc-primary" disabled={busy || !s.topics.length}>
           {busy ? "Working…" : "Generate flashcards"}

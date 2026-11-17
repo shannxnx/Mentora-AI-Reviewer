@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
 import { Suspense } from "react";
 
 async function ErrorContent({
@@ -12,7 +13,7 @@ async function ErrorContent({
     <>
       {params?.error ? (
         <p className="text-sm text-muted-foreground">
-          Code error: {params.error}
+          {params.error}
         </p>
       ) : (
         <p className="text-sm text-muted-foreground">
@@ -35,13 +36,15 @@ export default function Page({
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">
-                Sorry, something went wrong.
+                We couldn’t open this link
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Suspense>
                 <ErrorContent searchParams={searchParams} />
               </Suspense>
+              <Link className="text-link" href="/auth/login">Return to log in</Link>
+              <Link className="text-link ml-4" href="/auth/forgot-password">Reset password</Link>
             </CardContent>
           </Card>
         </div>

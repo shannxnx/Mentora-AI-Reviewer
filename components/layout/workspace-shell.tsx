@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, FolderOpen, LayoutDashboard, Layers, LogOut, Menu, Sparkles, ClipboardList, UserRound } from "lucide-react";
+import { BookOpen, FolderOpen, LayoutDashboard, Layers, LogOut, Menu, Sparkles, ClipboardList, UserRound, ChevronDown } from "lucide-react";
 import { Brand } from "./brand";
 import { createClient } from "@/lib/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -60,16 +60,16 @@ export function WorkspaceShell({ accountId, email, children }: { accountId: stri
         <div className="header-title">
           <DropdownMenu>
             <DropdownMenuTrigger className="icon-button mobile-menu" aria-label="Open navigation"><Menu size={22} /></DropdownMenuTrigger>
-            <DropdownMenuContent align="start">{links.map(link => <DropdownMenuItem asChild key={link.key}>{link}</DropdownMenuItem>)}</DropdownMenuContent>
+            <DropdownMenuContent className="mentora-menu" align="start" sideOffset={10}>{links.map(link => <DropdownMenuItem asChild key={link.key}>{link}</DropdownMenuItem>)}</DropdownMenuContent>
           </DropdownMenu>
           <strong>{pages.find(p => p.href === path)?.label ?? "My workspace"}</strong>
         </div>
         <DropdownMenu>
-          <DropdownMenuTrigger className="profile-trigger" aria-label="Open account menu"><span className="avatar">{(displayName || email).charAt(0).toUpperCase()}</span></DropdownMenuTrigger>
-          <DropdownMenuContent align="end"><div className="px-2 py-1 text-sm">{displayName || email}</div><DropdownMenuItem asChild><Link href="/dashboard/profile"><UserRound size={16} /> My profile</Link></DropdownMenuItem><DropdownMenuItem disabled={busy} onSelect={() => void signOut()}><LogOut size={16} /> Sign out</DropdownMenuItem></DropdownMenuContent>
+          <DropdownMenuTrigger className="profile-trigger" aria-label="Open account menu"><span className="avatar">{(displayName || email).charAt(0).toUpperCase()}</span><span className="account-name">{displayName || "My account"}</span><ChevronDown size={14} aria-hidden="true" /></DropdownMenuTrigger>
+          <DropdownMenuContent className="mentora-menu" align="end" sideOffset={10}><div className="account-menu-label">{displayName || email}</div><DropdownMenuItem asChild><Link href="/dashboard/profile"><UserRound size={16} /> My profile</Link></DropdownMenuItem><DropdownMenuItem disabled={busy} onSelect={() => void signOut()}><LogOut size={16} /> Sign out</DropdownMenuItem></DropdownMenuContent>
         </DropdownMenu>
       </header>
-      {error && <p role="alert">{error}</p>}
+      {error && <p className="learning-notice error" role="alert">{error}</p>}
       <main id="main-content" className="mentora-main" tabIndex={-1}>{children}</main>
     </div>
   </div>;

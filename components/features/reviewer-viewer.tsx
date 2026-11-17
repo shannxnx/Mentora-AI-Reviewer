@@ -29,15 +29,15 @@ export function ReviewerViewer({
       </div>
       <div className="reviewer-output-heading">
         <div>
-          <p className="eyebrow">PDF REVIEWER</p>
+          <p className="eyebrow">STUDY REVIEWER</p>
           <h2>{reviewer.title}</h2>
         </div>
         <button className="mentora-button secondary" onClick={onChooseAnother}>
-          <RotateCcw size={16} /> {backLabel ?? (archived ? "Back to flashcards" : "Choose another PDF")}
+          <RotateCcw size={16} /> {backLabel ?? (archived ? "Back to flashcards" : "Choose another file")}
         </button>
       </div>
       <div className="reviewer-disclaimer">
-        <strong>Generated from your PDF with AI.</strong>
+        <strong>Generated from your file with AI.</strong>
         <p>
           Review important details against the original document. AI can miss
           context or make mistakes.
@@ -46,7 +46,7 @@ export function ReviewerViewer({
       <div className="reviewer-source">
         <FileText size={20} />
         <div>
-          <span>Source PDF</span>
+          <span>Source file</span>
           <strong>{record.fileName}</strong>
         </div>
         <span>{formatPdfSize(record.size)}</span>

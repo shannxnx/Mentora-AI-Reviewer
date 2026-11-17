@@ -32,6 +32,11 @@ export type AnswerKey = Question & {
   explanation: string;
   evidence: string;
 };
+export function publicQuestions(keys: AnswerKey[]): Question[] {
+  return keys.map(({ id, type, prompt, options, topic, topicKey, reviewerId }) => ({
+    id, type, prompt, options, topic, topicKey, reviewerId,
+  }));
+}
 export type GradedAnswer = AnswerKey & {
   response: string;
   points: number;

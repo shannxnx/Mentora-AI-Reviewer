@@ -1119,3 +1119,17 @@
     font-size: 12px;
   }
 }
+
+.attempt-progress { display: block; width: 100%; height: 7px; accent-color: var(--mentora-accent); }
+.practice-question-body { min-width: 0; }
+.answer-option { transition: background-color 150ms ease, border-color 150ms ease; }
+.answer-option:focus-within { outline: 2px solid var(--mentora-accent); outline-offset: 2px; }
+.graded-question { border-inline-start: 3px solid #438268; }
+.graded-question[data-outcome="incorrect"] { border-inline-start-color: #ba6564; }
+.graded-question[data-outcome="partial"] { border-inline-start-color: #b28739; }
+.graded-question .score-pill { display: inline-flex; align-items: center; gap: 6px; }
+.graded-question[data-outcome="incorrect"] .score-pill { background: #fbeeee; color: #8b4446; }
+@media (hover: hover) { .answer-option:hover { border-color: #8da7ce; } }
+@media (prefers-reduced-motion: no-preference) {
+  .practice-question-body, .result-hero, .graded-question { animation: mentora-enter 180ms ease-out; }
+}

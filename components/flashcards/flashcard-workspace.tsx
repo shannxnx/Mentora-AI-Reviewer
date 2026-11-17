@@ -258,7 +258,7 @@ function LibraryView({ owner, page, selected, initialGuide }: { owner: string; p
           <div><h1>{page === "subjects" ? subject?.name ?? "Subject" : "Flashcards"}</h1>
             {page === "subjects" && subject && <p>Your reviewers, flashcards, and practice in one place.</p>}
           </div>
-          {page === "subjects" && subject && <Link className="mentora-button primary" href={"/dashboard/generate?" + new URLSearchParams({ subject: subject.id, new: "1" })}><Plus size={18} aria-hidden="true" />Add a PDF</Link>}
+          {page === "subjects" && subject && <Link className="mentora-button primary" href={"/dashboard/generate?" + new URLSearchParams({ subject: subject.id, new: "1" })}><Plus size={18} aria-hidden="true" />Add a file</Link>}
         </div>
         {page !== "subjects" && subject && <Link className="text-link" href={"/dashboard/practice?subject=" + subject.id}>Practice this subject →</Link>}
       </header>

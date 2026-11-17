@@ -51,9 +51,9 @@ export function SubjectOverview({ subject, guides, decks, record, busy, view, on
       </ul> : <div className="subjects-empty subject-empty-content">
         <span className="subject-book"><UploadCloud size={29} strokeWidth={1.6} aria-hidden="true" /></span>
         <h3>Add your first reviewer</h3>
-        <p>Upload a lecture PDF to create a study guide for {subject.name}. Save it here when it’s ready.</p>
-        <Link className="mentora-button primary" href={uploadHref}><UploadCloud size={18} aria-hidden="true" />Add a PDF</Link>
-        <small>Using PowerPoint? Export your slides as a PDF first.</small>
+        <p>Upload lecture notes or slides to create a study guide for {subject.name}. Save it here when it’s ready.</p>
+        <Link className="mentora-button primary" href={uploadHref}><UploadCloud size={18} aria-hidden="true" />Add a file</Link>
+        <small>PDF, PPT, or PPTX · Up to 10 MB</small>
       </div> : decks.length > 0 ? <ul className="subject-resource-list">
         {decks.map(deck => <li key={deck.id}>
           <button className="subject-resource-main subject-deck-open" onClick={() => onDeck(deck)}>
@@ -65,8 +65,8 @@ export function SubjectOverview({ subject, guides, decks, record, busy, view, on
       </ul> : <div className="subjects-empty subject-empty-content">
         <span className="subject-book"><Layers size={29} strokeWidth={1.6} aria-hidden="true" /></span>
         <h3>Turn ideas into practice</h3>
-        <p>{guides.length ? "Choose “Make flashcards” next to one of your reviewers to create a deck." : "Add a PDF and save a reviewer first. Then you can turn it into flashcards."}</p>
-        {guides.length ? <button className="mentora-button secondary" onClick={() => onView("reviewers")}><BookOpen size={17} aria-hidden="true" />Choose a reviewer</button> : <Link className="mentora-button primary" href={uploadHref}>Add a PDF<ArrowRight size={17} aria-hidden="true" /></Link>}
+        <p>{guides.length ? "Choose “Make flashcards” next to one of your reviewers to create a deck." : "Add a file and save a reviewer first. Then you can turn it into flashcards."}</p>
+        {guides.length ? <button className="mentora-button secondary" onClick={() => onView("reviewers")}><BookOpen size={17} aria-hidden="true" />Choose a reviewer</button> : <Link className="mentora-button primary" href={uploadHref}>Add a file<ArrowRight size={17} aria-hidden="true" /></Link>}
       </div>}
     </section>
   </div>;

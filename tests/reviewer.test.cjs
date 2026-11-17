@@ -10,7 +10,7 @@ require.extensions[".ts"] = (mod, filename) => mod._compile(
   }).outputText, filename,
 );
 const { requestReviewer } = require("../lib/reviewer/request-reviewer.ts");
-const { parseStoredReviewer, pdfSelectionError } = require("../lib/reviewer/pdf-reviewer.ts");
+const { parseStoredReviewer, sourceSelectionError } = require("../lib/reviewer/pdf-reviewer.ts");
 
 const guide = {
   version: 3, title: "Triangles", overview: "Right triangles",
@@ -59,9 +59,10 @@ test("existing saved records without cache metadata still open", () => {
   assert.equal(record.sourceHash, undefined);
 });
 test("invalid uploads and cancelled requests stop before transmission", async () => {
-  assert.match(pdfSelectionError({ name: "slides.PPTX", size: 100 }), /PowerPoint.*PDF/);
-  assert.match(pdfSelectionError({ name: "empty.pdf", size: 0 }), /empty/);
-  assert.match(pdfSelectionError({ name: "large.pdf", size: 10485761 }), /10 MB/);
+  assert.equal(sourceSelectionError({ name: "slides.PPTX", size: 100 }), null);
+  assert.match(sourceSelectionError({ name: "lesson.doc", size: 100 }), /Choose a PDF or a PowerPoint/);
+  assert.match(sourceSelectionError({ name: "empty.pdf", size: 0 }), /empty/);
+  assert.match(sourceSelectionError({ name: "large.pdf", size: 10485761 }), /10 MB/);
   await assert.rejects(requestReviewer(file, "balanced", {
     previous: null, signal: AbortSignal.abort(), onStatus() {},
   }), { name: "AbortError" });

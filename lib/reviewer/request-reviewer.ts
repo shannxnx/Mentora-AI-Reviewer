@@ -1,4 +1,4 @@
-import { pdfSelectionError, type ReviewerRecord } from "./pdf-reviewer";
+import { sourceSelectionError, type ReviewerRecord } from "./pdf-reviewer";
 import { isStudyGuide, type StudyDepth, type StudyGuide } from "./study-guide";
 
 type Options = {
@@ -18,16 +18,16 @@ function upload(file: File, depth: StudyDepth, { signal, onStatus }: Options) {
     request.responseType = "json";
     request.upload.onprogress = (event) => {
       if (event.lengthComputable)
-        onStatus("Uploading PDF · " + Math.round(100 * event.loaded / event.total) + "%");
+        onStatus("Uploading file · " + Math.round(100 * event.loaded / event.total) + "%");
     };
-    request.upload.onload = () => onStatus("Reading the PDF and writing your reviewer…");
+    request.upload.onload = () => onStatus("Reading the file and writing your reviewer…");
     request.onload = () => {
       const data = request.response;
       if (request.status >= 200 && request.status < 300 && isStudyGuide(data?.reviewer))
         resolve(data.reviewer);
       else
         reject(new Error(typeof data?.error === "string" ? data.error :
-          request.status === 413 ? "The upload limit was exceeded. Try a smaller PDF." :
+          request.status === 413 ? "The upload limit was exceeded. Try a smaller file." :
           "Could not read the reviewer response. Please try again."));
     };
     request.onerror = () => reject(new Error("The connection was interrupted. Check your connection and try again."));
@@ -35,17 +35,17 @@ function upload(file: File, depth: StudyDepth, { signal, onStatus }: Options) {
     request.onloadend = () => signal.removeEventListener("abort", cancel);
     signal.addEventListener("abort", cancel, { once: true });
     const form = new FormData();
-    form.set("pdf", file);
+    form.set("file", file);
     form.set("depth", depth);
-    onStatus("Uploading your PDF…");
+    onStatus("Uploading your file…");
     request.send(form);
   });
 }
 
 export async function requestReviewer(file: File, depth: StudyDepth, options: Options): Promise<ReviewerRecord> {
-  const invalid = pdfSelectionError(file);
+  const invalid = sourceSelectionError(file);
   if (invalid) throw new Error(invalid);
-  options.onStatus("Checking your PDF…");
+  options.onStatus("Checking your file…");
   const hash = globalThis.crypto?.subtle
     ? await crypto.subtle.digest("SHA-256", await file.arrayBuffer())
     : null;

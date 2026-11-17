@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  outputFileTracingIncludes: {
+    "/api/reviewer": [
+      "./lib/presentations/*.mjs", "./node_modules/{yauzl,pend,saxes,xmlchars,cfb,adler-32,crc-32}/**/*",
+    ],
+  },
   async redirects() {
     const sections = ["subjects", "materials", "generate", "flashcards", "profile", "progress", "practice"];
     return [

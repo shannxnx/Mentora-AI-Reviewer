@@ -1,6 +1,7 @@
 import { isStudyGuide, type StudyGuide, type StudyDepth } from "./study-guide";
 
-export const MAX_PDF_BYTES = 10 * 1024 * 1024;
+export const STUDY_FILE_ACCEPT = ".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation";
+export const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 
 export type ReviewerConcept = {
   title: string;
@@ -30,17 +31,13 @@ export type ReviewerRecord = {
   depth?: StudyDepth;
 };
 
-export function pdfSelectionError(
+export function sourceSelectionError(
   file: Pick<File, "name" | "size">,
 ): string | null {
-  if (!file.name.toLowerCase().endsWith(".pdf"))
-    return /\.pptx?$/i.test(file.name)
-      ? "In PowerPoint, choose File → Export or Save As, select PDF, then upload the exported file."
-      : "Choose a PDF file (.pdf).";
-  if (file.name.length > 255) return "Shorten the PDF file name to 255 characters or fewer.";
-  if (file.size === 0) return "This file is empty. Choose a PDF with content.";
-  if (file.size > MAX_PDF_BYTES)
-    return "This PDF is too large. Choose a file of 10 MB or less.";
+  if (!/\.(pdf|pptx?)$/i.test(file.name)) return "Choose a PDF or a PowerPoint presentation (.ppt or .pptx).";
+  if (file.name.length > 255) return "Shorten the file name to 255 characters or fewer.";
+  if (file.size === 0) return "This file is empty. Choose a file with lesson content.";
+  if (file.size > MAX_SOURCE_BYTES) return "Upload a file of 10 MB or less.";
   return null;
 }
 
@@ -132,7 +129,7 @@ export function parseReviewerRecord(data: unknown): ReviewerRecord | null {
     typeof data.size !== "number" ||
     !Number.isInteger(data.size) ||
     data.size < 5 ||
-    pdfSelectionError({ name: data.fileName, size: data.size })
+    sourceSelectionError({ name: data.fileName, size: data.size })
   )
     return null;
   const reviewer = isStudyGuide(data.reviewer) ? data.reviewer : parseReviewer(data.reviewer);

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Clock3, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, CircleDot, RotateCw, Clock3, RotateCcw } from "lucide-react";
 import {
   typeLabels,
   topicInsights,
@@ -263,6 +263,7 @@ function TestRunner({
           </div>
         </div>
       )}
+      <progress className="attempt-progress" value={answered} max={test.questions.length} aria-label="Questions answered" />
       <div className="test-layout">
         <section className="learning-card question-card">
           <div className="section-heading">
@@ -271,8 +272,9 @@ function TestRunner({
             </span>
             <span className="muted">{typeLabels[q.type]}</span>
           </div>
+          <div className="practice-question-body" key={q.id}>
           <p className="question-topic">{q.topic}</p>
-          <h2 id="question-label" className="question-prompt">
+          <h2 id="question-label" className="question-prompt" aria-live="polite">
             {q.prompt}
           </h2>
           <fieldset
@@ -334,6 +336,7 @@ function TestRunner({
               </label>
             )}
           </fieldset>
+          </div>
           <div className="question-footer">
             <button
               className="small-button"
@@ -427,6 +430,24 @@ function Results({ data }: { data: Payload }) {
     topics = topicInsights(result.items);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const correct = result.items.filter(item => item.points === 1).length;
+  const missed = result.total - correct;
+  const accuracy = Math.round(correct / result.total * 100);
+  async function retake(onlyMissed: boolean) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const payload = onlyMissed ? { retryAttemptId: attempt.id } : { testId: test.id };
+      const next = await requestJson<{ attemptId: string }>("/api/practice/attempt", {
+        method: "POST", body: JSON.stringify(payload),
+      });
+      window.location.assign("/dashboard/practice?attempt=" + next.attemptId);
+    } catch (cause) {
+      setError((cause as Error).message);
+      setBusy(false);
+    }
+  }
   return (
     <div className="learning-page">
       <Link className="text-link" href="/dashboard/practice">
@@ -434,11 +455,12 @@ function Results({ data }: { data: Payload }) {
       </Link>
       <section className="learning-card result-hero">
         <div>
+          <CheckCircle2 className="study-complete-icon" size={30} aria-hidden="true" />
           <h1>Test results</h1>
           <p>{test.title}</p>
           <p>
             {result.earned} of {result.total} points ·{" "}
-            {result.items.filter((i) => i.points === 1).length} fully correct
+            {accuracy}% accuracy ({correct} fully correct)
           </p>
         </div>
         <div className="score-circle">
@@ -447,26 +469,11 @@ function Results({ data }: { data: Payload }) {
         </div>
       </section>
       <div className="button-row">
-        <button
-          className="learning-button"
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            try {
-              const next = await requestJson<{ attemptId: string }>(
-                "/api/practice/attempt",
-                { method: "POST", body: JSON.stringify({ testId: test.id }) },
-              );
-              window.location.assign(
-                "/dashboard/practice?attempt=" + next.attemptId,
-              );
-            } catch (e) {
-              setError((e as Error).message);
-              setBusy(false);
-            }
-          }}
-        >
-          <RotateCcw size={16} /> Retake this test
+        {missed > 0 && <button className="learning-button" disabled={busy} onClick={() => void retake(true)}>
+          <RotateCcw size={16} />Retry missed questions ({missed})
+        </button>}
+        <button className="small-button" disabled={busy} onClick={() => void retake(false)}>
+          <RotateCw size={16} />Retake this test
         </button>
         <Link
           className="small-button"
@@ -525,7 +532,7 @@ function Results({ data }: { data: Payload }) {
         </div>
         <div className="answer-review">
           {result.items.map((item, i) => (
-            <article className="learning-card" key={item.id}>
+            <article className="learning-card graded-question" data-outcome={item.points === 1 ? "correct" : item.points > 0 ? "partial" : "incorrect"} key={item.id}>
               <div className="section-heading">
                 <span className="learning-tag">
                   {i + 1} / {typeLabels[item.type]}
@@ -535,7 +542,8 @@ function Results({ data }: { data: Payload }) {
                     item.points === 1 ? "score-pill" : "score-pill needs-review"
                   }
                 >
-                  {item.points} / 1 point
+                  {item.points === 1 ? <Check size={15} /> : <CircleDot size={15} />}
+                  {item.points === 1 ? "Correct" : item.points > 0 ? "Partial credit" : "Incorrect"} · {item.points} / 1
                 </span>
               </div>
               <h3 className="question-prompt">{item.prompt}</h3>

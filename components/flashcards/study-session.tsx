@@ -1,4 +1,5 @@
 "use client";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, RotateCcw, Shuffle } from "lucide-react";
 import { ActivityTracker } from "@/components/learning/activity-tracker";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -33,6 +34,12 @@ export function StudySession({
   const locked = useRef(false);
   const [error, setError] = useState("");
   const card = queue[index];
+  const touch = useRef<{ x: number; y: number } | null>(null);
+  const swiped = useRef(false);
+  const [feedback, setFeedback] = useState("");
+  const face = useRef<HTMLButtonElement>(null);
+  const summary = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (finished) summary.current?.focus(); }, [finished]);
   const go = useCallback((n: number) => {
     setIndex(n);
     flip(false);
@@ -41,6 +48,7 @@ export function StudySession({
     setQueue(items);
     setSession(crypto.randomUUID());
     setResults({});
+    setFeedback("");
     go(0);
     finish(false);
     setError("");
@@ -61,6 +69,8 @@ export function StudySession({
         if (error) throw error;
         const next = { ...results, [card.id]: { rating, due: String(data) } };
         setResults(next);
+        setFeedback(rating === "known" ? "Got it recorded." : "Saved for another round.");
+        face.current?.focus({ preventScroll: true });
         for (let offset = 1; offset <= queue.length; offset++) {
           const i = (index + offset) % queue.length;
           if (!next[queue[i].id]) {
@@ -112,18 +122,18 @@ export function StudySession({
   const nextDue = Object.values(results)
     .map((r) => r.due)
     .sort()[0];
+  if (!queue.length) return <section className="fc-panel"><h2>No cards to study</h2><button onClick={onExit}>Back to deck</button></section>;
   if (finished)
     return (
-      <section className="fc-panel">
-        <p className="guide-kicker">Session summary</p>
-        <h2>Your recall this session</h2>
+      <section className="fc-panel recall-summary">
+        <CheckCircle2 className="study-complete-icon" size={32} aria-hidden="true" />
+        <h2 ref={summary} tabIndex={-1}>{studied === queue.length ? "Session complete" : "Session summary"}</h2>
         <p>
           {studied} of {queue.length} studied ·{" "}
           {Math.round((studied / queue.length) * 100)}% complete
         </p>
         <p>
-          {studied - difficult.length} marked Known · {difficult.length} marked
-          Still Learning
+          {studied - difficult.length} got it · {difficult.length} to study again
         </p>
         {difficult.length > 0 && (
           <p>
@@ -139,7 +149,7 @@ export function StudySession({
         <div className="fc-actions">
           {!!difficult.length && (
             <button onClick={() => start(difficult)}>
-              Retry Still Learning
+              Study these {difficult.length} again
             </button>
           )}
           <button onClick={() => start(cards)}>Restart session</button>
@@ -148,74 +158,60 @@ export function StudySession({
       </section>
     );
   return (
-    <section className="fc-panel">
+    <section className="fc-panel recall-session">
       <ActivityTracker kind="flashcards" resource={cards[0]?.deck_id ?? session} title={topics[card?.topic] ? "Flashcards · " + topics[card.topic] : "Flashcard practice"} />
       <p className="guide-kicker">Study session</p>
       <h2>{topics[card.topic]}</h2>
-      <p aria-live="polite">
-        Card {index + 1} of {queue.length} · {studied} reviewed
-      </p>
-      <progress
-        max={queue.length}
-        value={studied}
-        aria-label="Cards reviewed"
-      />
-      <button
-        className="fc-face"
-        type="button"
-        disabled={busy}
-        aria-label={back ? "Show question" : "Reveal answer"}
-        onClick={() => flip(!back)}
-      >
-        <span key={card.id + String(back)} className="fc-face-content">
-          <small>
-            {back ? "Answer" : "Question"}
-            {card.origin === "illustration" ? " · AI illustration" : ""}
-          </small>
-          <span>{back ? card.back : card.front}</span>
+      <div className="recall-meta" aria-live="polite">
+        <strong>Card {index + 1} of {queue.length}</strong>
+        <span>{studied} completed · {queue.length - studied} remaining</span>
+      </div>
+      <progress max={queue.length} value={studied} aria-label="Cards completed" />
+      <button ref={face} className="fc-face" type="button" aria-disabled={busy}
+        aria-label={(back ? "Answer. " + card.back + ". Show question" : "Question. " + card.front + ". Reveal answer")}
+        onTouchStart={e => {
+          swiped.current = false;
+          touch.current = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+        }}
+        onTouchCancel={() => { touch.current = null; }}
+        onTouchEnd={e => {
+          const start = touch.current;
+          touch.current = null;
+          if (!start || busy || !e.changedTouches.length) return;
+          const dx = e.changedTouches[0].clientX - start.x;
+          const dy = e.changedTouches[0].clientY - start.y;
+          if (Math.abs(dx) >= 48 && Math.abs(dx) > 1.5 * Math.abs(dy)) {
+            swiped.current = true;
+            go(Math.max(0, Math.min(queue.length - 1, index + (dx < 0 ? 1 : -1))));
+          }
+        }}
+        onClick={e => {
+          if (!busy && (!swiped.current || e.detail === 0)) flip(v => !v);
+          swiped.current = false;
+        }}>
+        <span key={card.id} className="recall-enter">
+          <span className="recall-turn" data-revealed={back}>
+            {(["question", "answer"] as const).map(side => <span key={side} className={"recall-side " + side} aria-hidden="true">
+              <small>{side === "answer" ? "Answer" : "Question"}{card.origin === "illustration" && " · AI illustration"}</small>
+              <span>{side === "answer" ? card.back : card.front}</span>
+              <small className="recall-hint">{side === "answer" ? "Tap to see question" : "Tap to reveal answer"}</small>
+            </span>)}
+          </span>
         </span>
       </button>
-      <div className="fc-actions">
-        <button disabled={busy || index === 0} onClick={() => go(index - 1)}>
-          Previous
-        </button>
-        <button disabled={busy} onClick={() => flip(!back)}>
-          Flip
-        </button>
-        <button
-          disabled={busy || index === queue.length - 1}
-          onClick={() => go(index + 1)}
-        >
-          Next
-        </button>
-        <button
-          disabled={busy || queue.length < 2}
-          onClick={() => {
-            setQueue(shuffled(queue));
-            go(0);
-          }}
-        >
-          Shuffle
-        </button>
+      <div className="recall-ratings">
+        <button disabled={busy || !back || !!results[card.id]} onClick={() => rate("learning")}><RotateCcw size={17} />Study Again</button>
+        <button className="fc-primary" disabled={busy || !back || !!results[card.id]} onClick={() => rate("known")}><Check size={18} />Got It</button>
       </div>
-      <div className="fc-actions">
-        <button
-          disabled={busy || !back || !!results[card.id]}
-          onClick={() => rate("learning")}
-        >
-          1 · Still Learning
-        </button>
-        <button
-          disabled={busy || !back || !!results[card.id]}
-          onClick={() => rate("known")}
-        >
-          2 · Known
-        </button>
+      <div className="recall-feedback" role="status">
+        <span key={studied}>{busy ? "Saving your rating…" : results[card.id] ? (results[card.id].rating === "known" ? "Marked Got It" : "Marked Study Again") : feedback}</span>
       </div>
-      <p>
-        Space flips the card. Arrow keys navigate. Reveal the answer before
-        rating your recall.
-      </p>
+      <div className="recall-navigation">
+        <button disabled={busy || index === 0} onClick={() => go(index - 1)}><ArrowLeft size={16} />Previous</button>
+        <button disabled={busy || queue.length < 2} onClick={() => { setQueue(shuffled(queue)); go(0); }}><Shuffle size={16} />Shuffle</button>
+        <button disabled={busy || index === queue.length - 1} onClick={() => go(index + 1)}>Next<ArrowRight size={16} /></button>
+      </div>
+      <p className="recall-help"><span>Space to flip · ← → to move · 1 Study Again · 2 Got It</span><span>Swipe left or right to move between cards.</span></p>
       {error && <p role="alert">{error}</p>}
       <div className="fc-actions">
         <button disabled={busy} onClick={() => finish(true)}>

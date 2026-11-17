@@ -105,32 +105,30 @@
 .fc-launch {
   margin-bottom: 16px;
 }
-.fc-face {
-  display: grid;
-  width: 100%;
-  height: clamp(250px, 36vh, 370px);
-  margin: 15px 0;
-  border-radius: 16px;
-  border: 1px solid #c9d7eb;
-  background: #f8faff;
-  padding: clamp(12px, 3vw, 32px);
-  cursor: pointer;
+.recall-session, .recall-summary { width: 100%; max-width: 850px; margin-inline: auto; }
+.recall-meta, .recall-navigation, .recall-ratings { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.recall-meta { margin: 15px 0 6px; font-size: 13px; color: var(--mentora-muted); flex-wrap: wrap; }
+.recall-ratings button, .recall-navigation button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.recall-ratings button { flex: 1; }
+.fc-face { display: block; width: 100%; position: relative; margin: 20px 0; perspective: 1200px; touch-action: pan-y pinch-zoom; border-radius: 16px; }
+.recall-enter, .recall-turn { display: grid; width: 100%; }
+.recall-turn { transform-style: preserve-3d; transition: transform 320ms cubic-bezier(.2,.72,.25,1); }
+.recall-turn[data-revealed="true"] { transform: rotateY(180deg); }
+.recall-side { grid-area: 1/1; padding: clamp(20px, 4vw, 44px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; min-height: clamp(240px, 34vh, 370px); backface-visibility: hidden; -webkit-backface-visibility: hidden; border: 1px solid #cbd8ed; border-radius: 16px; background: #f6f9ff; white-space: pre-wrap; overflow-wrap: anywhere; font-size: clamp(18px, 2.3vw, 25px); line-height: 1.5; }
+.recall-side.answer { transform: rotateY(180deg); background: #f1f7f5; border-color: #cddfd9; }
+.recall-side small { font-size: 13px; font-weight: 600; }
+.recall-side .recall-hint { color: var(--mentora-muted); font-weight: 400; }
+.recall-feedback { min-height: 30px; padding-top: 5px; color: #286551; font-size: 13px; }
+.recall-help { color: var(--mentora-muted); font-size: 12px; }
+.recall-help span:last-child { display: none; }
+.study-complete-icon { color: #28735c; margin-bottom: 10px; }
+@media (hover: hover) { .fc-face:hover .recall-side { border-color: #8da8d0; } }
+@media (pointer: coarse) { .recall-help span:first-child { display: none; } .recall-help span:last-child { display: inline; } }
+@media (prefers-reduced-motion: no-preference) {
+  .recall-enter, .study-complete-icon { animation: mentora-enter 180ms ease-out; }
 }
-.fc-face-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: safe center;
-  align-items: center;
-  overflow: auto;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-size: clamp(1rem, 2vw, 1.4rem);
-  animation: fc-turn 0.22s ease-out;
-}
-.fc-face-content small {
-  margin-bottom: 14px;
-  font-size: 0.8rem;
-  font-weight: 650;
+@media (prefers-reduced-motion: reduce) {
+  .recall-turn { transition: none; }
 }
 .fc-panel progress {
   accent-color: #4b67ac;
@@ -144,21 +142,6 @@
 .fc-panel blockquote {
   padding-inline-start: 12px;
   border-inline-start: 3px solid #bccae0;
-}
-@keyframes fc-turn {
-  from {
-    transform: perspective(650px) rotateY(24deg);
-    opacity: 0.25;
-  }
-  to {
-    transform: perspective(650px) rotateY(0);
-    opacity: 1;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .fc-face-content {
-    animation: none;
-  }
 }
 @media print {
   .fc-launch {
@@ -331,4 +314,15 @@
   .fc-panel .fc-add-subject label { flex-basis: 100%; }
   .fc-panel .fc-add-subject button { width: 100%; }
   .subject-tile { padding: 18px; }
+}
+
+.recall-session progress, .attempt-progress {
+  display: block; appearance: none; height: 7px; border: 0; border-radius: 20px;
+  overflow: hidden; background: #e6edf6; color: var(--mentora-accent);
+}
+.recall-session progress::-webkit-progress-bar, .attempt-progress::-webkit-progress-bar { background: #e6edf6; }
+.recall-session progress::-webkit-progress-value, .attempt-progress::-webkit-progress-value { background: var(--mentora-accent); border-radius: 20px; transition: width 160ms ease; }
+.recall-session progress::-moz-progress-bar, .attempt-progress::-moz-progress-bar { background: var(--mentora-accent); }
+@media (prefers-reduced-motion: no-preference) {
+  .recall-feedback > span { display: inline-block; animation: mentora-enter 170ms ease-out; }
 }

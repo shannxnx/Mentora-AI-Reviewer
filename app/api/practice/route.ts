@@ -7,7 +7,7 @@ import {
   RequestError,
 } from "@/lib/practice/server";
 import { seal } from "@/lib/practice/crypto";
-import { isUuid, validSettings } from "@/lib/practice/model";
+import { isUuid, publicQuestions, validSettings } from "@/lib/practice/model";
 import { parseReviewerRecord } from "@/lib/reviewer/pdf-reviewer";
 import type { SavedGuide } from "@/lib/flashcards/model";
 
@@ -120,17 +120,7 @@ export async function POST(request: Request) {
       const { generateTest } = await import("@/lib/practice/ai");
       const keys = await generateTest(guides as SavedGuide[], input.settings),
         encrypted = seal(keys);
-      const questions = keys.map(
-        ({ id, type, prompt, options, topic, topicKey, reviewerId }) => ({
-          id,
-          type,
-          prompt,
-          options,
-          topic,
-          topicKey,
-          reviewerId,
-        }),
-      );
+      const questions = publicQuestions(keys);
       const { data: test, error: saveError } = await db
         .from("practice_tests")
         .insert({

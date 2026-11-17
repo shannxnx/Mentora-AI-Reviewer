@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import {
-  pdfSelectionError,
+  STUDY_FILE_ACCEPT, sourceSelectionError,
   formatPdfSize,
 } from "@/lib/reviewer/pdf-reviewer";
 import { findSavedReviewer, saveReviewerToLibrary } from "@/lib/reviewer/library";
@@ -98,10 +98,10 @@ export function StudentPdfReviewer({
     setError("");
     setFile(null);
     if (files.length !== 1) {
-      setError("Choose one PDF at a time.");
+      setError("Choose one file at a time.");
       return;
     }
-    const selectionError = pdfSelectionError(files[0]);
+    const selectionError = sourceSelectionError(files[0]);
     if (selectionError) {
       setError(selectionError);
       return;
@@ -113,7 +113,7 @@ export function StudentPdfReviewer({
     event.preventDefault();
     if (request.current) return;
     if (!file) {
-      setError("Choose a PDF before creating your reviewer.");
+      setError("Choose a file before creating your reviewer.");
       input.current?.focus();
       return;
     }
@@ -190,7 +190,7 @@ export function StudentPdfReviewer({
         <>
           <ol className="reviewer-steps" aria-label="Reviewer steps">
             <li className="active">
-              <span>1</span> Choose a PDF
+              <span>1</span> Choose a file
             </li>
             <li className={busy ? "active" : ""}>
               <span>2</span> Generate reviewer
@@ -204,7 +204,7 @@ export function StudentPdfReviewer({
               <div className="panel-heading">
                 <div>
                   <h2>Your next study session starts here</h2>
-                  <p>Choose a PDF up to 10 MB. For PowerPoint slides, choose File → Export or Save As → PDF first.</p>
+                  <p>Choose a PDF or PowerPoint presentation up to 10 MB.</p>
                 </div>
               </div>
               <form
@@ -235,15 +235,15 @@ export function StudentPdfReviewer({
                   <span className="pdf-upload-icon">
                     <UploadCloud size={30} />
                   </span>
-                  <h3>Drop your PDF here</h3>
+                  <h3>Drop your file here</h3>
                   <p>or choose a file from your device</p>
                   <input
                     ref={input}
                     id="student-pdf"
-                    aria-label="Choose PDF file"
+                    aria-label="Choose a PDF or PowerPoint file"
                     aria-describedby="pdf-limits pdf-privacy"
                     type="file"
-                    accept=".pdf,application/pdf"
+                    accept={STUDY_FILE_ACCEPT}
                     disabled={busy}
                     onChange={(event) => {
                       if (event.target.files?.length)
@@ -252,7 +252,7 @@ export function StudentPdfReviewer({
                     }}
                   />
                   <p id="pdf-limits">
-                    PDF only · Maximum 10 MB · One file at a time
+                    PDF, PPT, PPTX · Maximum 10 MB · One file at a time
                   </p>
                 </div>
                 {file && (
@@ -269,7 +269,7 @@ export function StudentPdfReviewer({
                     <button
                       type="button"
                       className="icon-button"
-                      aria-label="Remove selected PDF"
+                      aria-label="Remove selected file"
                       disabled={busy}
                       onClick={() => {
                         setFile(null);
@@ -343,7 +343,7 @@ export function StudentPdfReviewer({
                   </p>
                 )}
                 <p id="pdf-privacy" className="pdf-privacy">
-                  Your PDF is sent securely to Google Gemini to generate the
+                  Your PDF or extracted slide content is sent to Google Gemini to generate the
                   reviewer. Mentora does not save the file. Google&apos;s free API
                   tier may use submitted content to improve its products. The
                   generated reviewer is remembered only in this browser tab.
@@ -374,8 +374,7 @@ export function StudentPdfReviewer({
               <div className="reviewer-demo-explanation">
                 <strong>How it works</strong>
                 <p>
-                  Gemini reads the PDF, including text and visible document
-                  content, then returns a structured reviewer grounded in it.
+                  Mentora uses the document text, slide notes, and supported visuals to create your study guide.
                 </p>
               </div>
             </aside>

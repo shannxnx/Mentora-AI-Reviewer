@@ -26,9 +26,9 @@ async function Dashboard() {
       <span className="dashboard-upload-icon"><UploadCloud size={28} strokeWidth={1.6} aria-hidden="true" /></span>
       <div>
         <h2>Create your next reviewer</h2>
-        <p>Upload your lecture PDF and build a study guide, flashcards, or a practice test.</p>
+        <p>Upload your lecture notes or slides and build a study guide, flashcards, or a practice test.</p>
       </div>
-      <Link className="mentora-button primary" href="/dashboard/generate">Choose a PDF<ArrowRight size={17} aria-hidden="true" /></Link>
+      <Link className="mentora-button primary" href="/dashboard/generate">Choose a file<ArrowRight size={17} aria-hidden="true" /></Link>
     </section>
     <ul className="dashboard-links">
       {links.map(({ href, title, icon: Icon, description }) => <li key={href}>

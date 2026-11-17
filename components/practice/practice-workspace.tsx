@@ -20,7 +20,7 @@ import {
 } from "@/lib/practice/model";
 import { AttemptHistory } from "./attempt-history";
 import { requestJson } from "@/lib/learning/http";
-import { pdfSelectionError } from "@/lib/reviewer/pdf-reviewer";
+import { STUDY_FILE_ACCEPT, sourceSelectionError } from "@/lib/reviewer/pdf-reviewer";
 import { requestReviewer } from "@/lib/reviewer/request-reviewer";
 import { findSavedReviewer, saveReviewerToLibrary } from "@/lib/reviewer/library";
 import { useStudentReviewer } from "@/components/features/student-reviewer-provider";
@@ -107,11 +107,11 @@ function TestLibrary() {
     e.preventDefault();
     setReady(null);
     await run(
-      mode === "pdf" ? "Reading your PDF…" : "Creating source-based questions…",
+      mode === "pdf" ? "Reading your file…" : "Creating source-based questions…",
       async () => {
         let reviewerIds = selected;
         if (mode === "pdf") {
-          if (!file) throw new Error("Choose a PDF first.");
+          if (!file) throw new Error("Choose a file first.");
           const controller = new AbortController();
           upload.current = controller;
           const generated = await requestReviewer(file, "balanced", {
@@ -150,7 +150,7 @@ function TestLibrary() {
       <header className="learning-heading">
         <div>
           <h1>Practice tests</h1>
-          <p>Create a test from a PDF or the reviewers saved in a subject.</p>
+          <p>Create a test from a file or the reviewers saved in a subject.</p>
         </div>
       </header>
       {error && (
@@ -170,7 +170,7 @@ function TestLibrary() {
               <BookIcon />
               <h2>Start with a subject</h2>
               <p>
-                Create your first subject, then add a PDF or saved reviewer to
+                Create your first subject, then add a file or saved reviewer to
                 build a test.
               </p>
               <Link className="learning-button" href="/dashboard/subjects">
@@ -220,7 +220,7 @@ function TestLibrary() {
                         aria-pressed={mode === "pdf"}
                         onClick={() => setMode("pdf")}
                       >
-                        Upload a PDF
+                        Upload a file
                       </button>
                     </div>
                     {mode === "saved" ? (
@@ -254,7 +254,7 @@ function TestLibrary() {
                             ))
                           ) : (
                             <p className="muted">
-                              No saved reviewers here yet. Upload a PDF to get
+                              No saved reviewers here yet. Upload a file to get
                               started.
                             </p>
                           )}
@@ -283,15 +283,14 @@ function TestLibrary() {
                         <FileText size={25} />
                         <strong>Choose your study material</strong>
                         <span>
-                          PDF · Up to 10 MB. Its reviewer is saved to this
-                          subject. In PowerPoint, choose File → Export or Save As → PDF.
+                          PDF or PowerPoint · Up to 10 MB. Your reviewer is saved to this subject.
                         </span>
                         <input
                           type="file"
-                          accept="application/pdf,.pdf"
+                          accept={STUDY_FILE_ACCEPT}
                           onChange={(e) => {
                             const next = e.target.files?.[0] ?? null;
-                            const invalid = next && pdfSelectionError(next);
+                            const invalid = next && sourceSelectionError(next);
                             setFile(invalid ? null : next);
                             setError(invalid || "");
                           }}

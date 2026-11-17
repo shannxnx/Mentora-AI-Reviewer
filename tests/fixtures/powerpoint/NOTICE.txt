@@ -1,0 +1,3 @@
+SampleShow.ppt and SampleShow.pptx are unmodified Apache POI test data.
+Source: https://github.com/apache/poi/tree/trunk/test-data/slideshow
+Copyright The Apache Software Foundation. Licensed under the Apache License, Version 2.0 (see LICENSE.txt).

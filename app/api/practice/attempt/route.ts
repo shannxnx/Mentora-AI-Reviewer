@@ -6,6 +6,7 @@ import {
   json,
   RequestError,
 } from "@/lib/practice/server";
+import { missedQuestionTest } from "@/lib/practice/retry";
 import { isUuid, type Attempt } from "@/lib/practice/model";
 export const maxDuration = 90;
 
@@ -38,12 +39,12 @@ export async function GET(request: Request) {
 }
 export async function POST(request: Request) {
   try {
-    const { db } = await account(),
-      input = await body(request);
-    if (!isUuid(input.testId)) throw new RequestError("Select a test.");
-    const { data, error } = await db.rpc("practice_start", {
-      p_test: input.testId,
-    });
+    const { db, user } = await account();
+    const input = await body(request);
+    let testId = input.testId;
+    if (isUuid(input.retryAttemptId)) testId = await missedQuestionTest(db, user.id, input.retryAttemptId);
+    if (!isUuid(testId)) throw new RequestError("Select a test.");
+    const { data, error } = await db.rpc("practice_start", { p_test: testId });
     if (error) throw error;
     return json({ attemptId: data.id });
   } catch (e) {

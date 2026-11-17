@@ -30,7 +30,7 @@ function TopicContent({ topic }: { topic: StudyTopic }) {
         </table>
       </div>}
       {topic.example && <div className="guide-example">
-        <h4>{topic.example.origin === "source" ? "Example from your PDF" : "AI illustration"}</h4>
+        <h4>{topic.example.origin === "source" ? "Example from your file" : "AI illustration"}</h4>
         <p>{topic.example.text}</p>
       </div>}
       {topic.takeaway && <p className="guide-takeaway"><strong>Remember</strong> {topic.takeaway}</p>}
@@ -59,10 +59,10 @@ export function StudyGuideView({ guide, record, onChooseAnother, archived = fals
       <header className="guide-heading">
         <span className="guide-kicker">AI study guide</span>
         <h2>{guide.title}</h2>
-        <p className="guide-source">Source PDF · {record.fileName}</p>
+        <p className="guide-source">Source file · {record.fileName}</p>
         <div className="guide-actions">
           <button type="button" className="mentora-button secondary" onClick={() => window.print()}><Printer size={15} /> Print / Save PDF</button>
-          <button type="button" className="mentora-button secondary" onClick={onChooseAnother}><RotateCcw size={15} /> {backLabel ?? (archived ? "Back to flashcards" : "Choose another PDF")}</button>
+          <button type="button" className="mentora-button secondary" onClick={onChooseAnother}><RotateCcw size={15} /> {backLabel ?? (archived ? "Back to flashcards" : "Choose another file")}</button>
         </div>
       </header>
       <div className="guide-layout">

@@ -102,9 +102,9 @@ export function SubjectDirectory({ owner }: { owner: string | null }) {
         <div className="subjects-empty subjects-onboarding">
           <span className="subject-book"><BookOpen size={30} strokeWidth={1.6} aria-hidden="true" /></span>
           <h2>A home for every subject</h2>
-          <p>{owner ? "Start with a class you’re studying. Then add a PDF to create your first reviewer." : "Sign in to organize your classes and keep your study materials in one place."}</p>
+          <p>{owner ? "Start with a class you’re studying. Then add a file to create your first reviewer." : "Sign in to organize your classes and keep your study materials in one place."}</p>
           {createButton("Create your first subject")}
-          <ol className="subject-steps"><li><span>1</span>Create a subject</li><li><span>2</span>Add a PDF</li><li><span>3</span>Read and practice</li></ol>
+          <ol className="subject-steps"><li><span>1</span>Create a subject</li><li><span>2</span>Add a file</li><li><span>3</span>Read and practice</li></ol>
         </div>
       ) : (
         <>
@@ -127,7 +127,7 @@ export function SubjectDirectory({ owner }: { owner: string | null }) {
                   <span className="subject-tile-top"><span className="subject-book"><BookOpen size={25} strokeWidth={1.7} aria-hidden="true" /></span>
                     {subject.enrolled_by && <span className="subject-origin">From your teacher</span>}</span>
                   <strong>{subject.name}</strong>
-                  <span className="subject-description">{subject.reviewerCount === 0 ? "No reviewers yet. Add a PDF to get started." : subject.reviewerCount + (subject.reviewerCount === 1 ? " saved reviewer" : " saved reviewers")}</span>
+                  <span className="subject-description">{subject.reviewerCount === 0 ? "No reviewers yet. Add a file to get started." : subject.reviewerCount + (subject.reviewerCount === 1 ? " saved reviewer" : " saved reviewers")}</span>
                   <span className="subject-tile-foot">Open subject<ArrowRight size={17} aria-hidden="true" /></span>
                 </Link>
               </li>
